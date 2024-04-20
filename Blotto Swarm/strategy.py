@@ -14,6 +14,14 @@ def keep_2_per_castle(ally: list, enemy: list, offset: int) -> int:
     # Implement me!
     return 0
 
+
+def go_to_nearby_castlev2(ally: list, enemy: list, offset: int) -> int:
+    castle_idx = 3+offset
+    return offset
+
+def go_to_nearby_castle(ally: list, enemy: list, offset: int) -> int:
+    return offset
+
 def weighted_random(ally: list, enemy: list, offset: int) -> int:
     # Implement me!
     netforce = 0
@@ -26,6 +34,22 @@ def weighted_random(ally: list, enemy: list, offset: int) -> int:
     netforce += offset
     if(netforce>1): return 1
     elif(netforce < -1): return -1
+    else: return 0
+
+def weighted_randomv2(ally: list, enemy: list, offset: int) -> int:
+    # Implement me!
+    if(ally[3]<3 and offset == 0): return 0
+
+    netforce = 0
+    for i in range(len(ally)):
+        if(i!=3): netforce -= ally[i]/((i-3)*abs(1-3))
+        if(i==3): netforce += max(0,ally[3]-4)*(random.random()*2-1)
+    #print(netforce)
+    #normalize netforce
+    #print(netforce)
+    netforce += offset
+    if(netforce>0.5): return 1
+    elif(netforce < -0.5): return -1
     else: return 0
 
 def random_strategy(ally: list, enemy: list, offset: int) -> int:
@@ -42,6 +66,6 @@ def get_strategies():
 
     In the official grader, only the first element of the list will be used as your strategy.
     """
-    strategies = [weighted_random, random_strategy]
+    strategies = [weighted_randomv2, weighted_random]
 
     return strategies
