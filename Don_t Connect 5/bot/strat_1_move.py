@@ -105,19 +105,19 @@ def eval_move(board_copy, player, pos): # return the value of a move played by p
     board_new = board_copy.copy()
     board_new[pos] = player
 
-    ferr = open('debug.txt', 'a')
-    if (len(board_new) < 16): print(board_new, file=ferr)
+    # ferr = open('debug.txt', 'a')
+    # if (len(board_new) < 16): print(board_new, file=ferr)
     visit = {p:0 for p in node_coordinates}
     new_diameter = get_diameter(board_new, pos, visit)
-    print(new_diameter, neighbor_diameters, file=ferr)
+    # print(new_diameter, neighbor_diameters, file=ferr)
 
-    ferr.close()
+    # ferr.close()
 
 
-    if (new_diameter == 5): return -1
-    if (new_diameter == 4 and max(neighbor_diameters) < 4 and sum(neighbor_diameters) != 9): return len(board_copy) // 3 - 5
-    if (new_diameter == 3 and max(neighbor_diameters) < 3): return 2
-    if (new_diameter >= 4 and 4 in neighbor_diameters): return -1
+    if (new_diameter == 5): return -100
+    if (new_diameter == 4 and max(neighbor_diameters) < 4 and sum(neighbor_diameters) != 9): return len(board_copy) // 3 + 1
+    if (new_diameter == 3 and max(neighbor_diameters) < 3): return len(board_copy) // 5 + 3
+    if (new_diameter >= 4 and 4 in neighbor_diameters): return -100
 
     # determine dist 2 score
 
@@ -145,6 +145,9 @@ def eval_move(board_copy, player, pos): # return the value of a move played by p
                     # print('good')
                     val += 1
     
+    if (min(pos) != -GRID_RADIUS + 1 and max(pos) != GRID_RADIUS):
+        val += 1
+
     return val
 
 
@@ -158,7 +161,7 @@ def strat_1_move(board_copy, player):
         if not visit[node] and node in board_copy:
             get_diameter(board_copy, node, visit, True)
 
-    print('Diameters:', diameters, '\n', file=open('debug.txt', 'a'))
+    # print('Diameters:', diameters, '\n', file=open('debug.txt', 'a'))
 
 
     maxscore = 0
@@ -169,7 +172,7 @@ def strat_1_move(board_copy, player):
         if node not in board_copy:
             val = eval_move(board_copy, player, node)
 
-            print("VAL:", val, file=open('debug.txt', 'a'))
+            # print("VAL:", val, file=open('debug.txt', 'a'))
             if (val < max_val): continue
             elif (val == max_val):
                 moves.append(node)
@@ -179,7 +182,7 @@ def strat_1_move(board_copy, player):
                 max_val = val
 
 
-    print('FINAL:', max_val, '\n', file=open('debug.txt', 'a'))
+    # print('FINAL:', max_val, '\n', file=open('debug.txt', 'a'))
     #print(maxscore)
     #print(select)
     if len(moves)==0:
