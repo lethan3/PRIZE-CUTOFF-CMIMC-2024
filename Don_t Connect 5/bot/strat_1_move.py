@@ -184,4 +184,5 @@ def strat_1_move(board_copy, player):
     #print(select)
     if len(moves)==0:
         return None
-    return random.choice(moves)
+    if max_val >= 0: return random.choice(moves)
+    else: return None
