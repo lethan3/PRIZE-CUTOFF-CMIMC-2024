@@ -1,6 +1,6 @@
 import random
 
-GRID_RADIUS = 3
+GRID_RADIUS = 4
 
 def random_bot_move(board_copy, player):
     node_coordinates = []
