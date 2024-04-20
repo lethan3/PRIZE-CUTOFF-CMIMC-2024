@@ -1,6 +1,7 @@
 import argparse
 from strategy import get_strategies
 import random
+import pygame
 
 class BlottoSwarmGame:
     NUM_CASTLES = 10
@@ -70,10 +71,27 @@ class BlottoSwarmGrader:
     """
     NUM_DAYS = 100
 
-    def __init__(self, num_games: int = 20, debug = False):
+    def __init__(self, num_games: int = 20, debug = False, visualize = False):
         self.num_games = num_games # number of games to play per pair of strategies
         self.debug = debug
+        self.visualize = visualize
+        self.screen = None
+        if self.visualize:
+            pygame.init()
+            self.screen = pygame.display.set_mode((800, 800))
+            self.screen.fill((255, 255, 255))
+            pygame.display.flip()
+            pygame.display.set_caption("Blotto Swarm")
+            self.clock = pygame.time.Clock()
+            self.font = pygame.font.Font(None, 36)
         self.strategies = get_strategies()
+
+    def view_current_state(self, game: BlottoSwarmGame):
+        text = self.font.render(str(game.board), True, (0, 0, 0))
+        self.screen.blit(text, (300, 300))
+        self.clock.tick(60)
+        pygame.display.flip()
+        
 
     def grade(self, strategy1, strategy2):
         scores = [0, 0]
@@ -101,6 +119,13 @@ class BlottoSwarmGrader:
                     for i, move in enumerate(moves[team]):
                         game.move(team, i, move)
                 game.calc_score()
+                if self.visualize:
+                    print(strategy1.__name__, game.board[0])
+                    print(strategy2.__name__, game.board[1])
+                    print(game.scores())
+                    self.view_current_state(game)
+                    print()
+                    input()
 
             game_score = game.scores()
             if game_score[0] > game_score[1]:
@@ -117,6 +142,7 @@ class BlottoSwarmGrader:
         """
         Grades all strategies against each other and prints the winrate of each strategy.
         """
+
         wins = [0] * len(self.strategies)
         for i in range(len(self.strategies)):
             for j in range(i+1, len(self.strategies)):
@@ -147,9 +173,10 @@ if __name__ == "__main__":
 
     parser.add_argument("--games", "-g", type=int, default=20)
     parser.add_argument("--debug", "-d", action="store_true")
+    parser.add_argument("--visualize", "-v", action="store_true")
 
     args = parser.parse_args()
 
-    grader = BlottoSwarmGrader(num_games=args.games, debug=args.debug)
+    grader = BlottoSwarmGrader(num_games=args.games, debug=args.debug, visualize=args.visualize)
     grader.grade_all()
     grader.print_result()
