@@ -3,7 +3,7 @@ import random
 import networkx as nx
 from graph import generate_graph, edge_list_to_nx
 from criminal import BaseCriminal, RandomCriminal
-from student import BaseStudent, RandomStudent
+from student import BaseStudent, RandomStudent, GreedyStudent, RandomGreedyStudent
 
 jsonify = lambda d: {str(k): v for k, v in d.items() if v}
 
@@ -125,7 +125,7 @@ if __name__ == "__main__":
     edge_list, begin, ends = generate_graph((15, 8), (1, 10), path="game.png")
 
     criminals = [("Random Criminal #1", RandomCriminal)]
-    students = [("Random Student #1", RandomStudent)]
+    students = [("Random Student #1", RandomStudent), ("Greedy Student #1", GreedyStudent), ("Random Greedy Student #1", RandomGreedyStudent) ]
 
     criminal_scores, student_scores = play(edge_list, begin, ends, criminals, students)
 
