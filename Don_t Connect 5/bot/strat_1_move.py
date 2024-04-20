@@ -16,7 +16,9 @@ for x in range(-GRID_RADIUS + 1, GRID_RADIUS + 1):
 
 NEIGHBOR_LIST = dict(zip(node_coordinates, [SELECT_VALID(ALL_NEIGHBOR(*(node))) for node in node_coordinates]))
 
-def get_diameter(board, start_node, visit): 
+diameters = {}
+
+def get_diameter(board, start_node, visit, upd_diameters = False): 
     def neighbors(node):
         #return SELECT_VALID(ALL_NEIGHBOR(*(node)))
         return NEIGHBOR_LIST[node]
@@ -49,28 +51,39 @@ def get_diameter(board, start_node, visit):
     connected = dict()
     con(start_node)
     #print(connected)
+    ret = 0
+
     if len(connected) <= 3: # must be a line
-        return len(connected)
-    if 4 <= len(connected) <= 5: # a star if we have a deg-3 node, a line otherwise
+        ret = len(connected)
+    elif 4 <= len(connected) <= 5: # a star if we have a deg-3 node, a line otherwise
         if 3 in connected.values(): # It's a star!
-            return len(connected) - 1
-        return len(connected)
-    if 6 == len(connected):
+            ret = len(connected) - 1
+        else:
+            ret = len(connected)
+    elif 6 == len(connected):
         three = list(connected.values())
         if 3 in connected.values():
             three.remove(3)
             if 3 in connected.values():
-                return 4 # this is a shape x - x - x - x
+                ret = 4 # this is a shape x - x - x - x
                         #                     x   x
-        return 5 # diameter is 5 otherwise
-
+            else: ret = 5 # diameter is 5 otherwise
+        else:
+            ret = 5
     # For the larger(>6) ones, diameter must be larger than 5 so we just return 5
-    return 5
+    else:
+        ret = 5
     # maxl = 0
 
     # for node in connected:
     #     maxl = max(maxl, dfs(node))
     # return maxl
+
+    for node in connected:
+        diameters[node] = ret
+    
+    return ret
+
 def score(board): # return current score for each player
     visit = {pos:0 for pos in node_coordinates}
     scores = {0:0 , 1:0, 2:0}
@@ -82,7 +95,6 @@ def score(board): # return current score for each player
     return scores
 
 def eval_move(board_copy, player, pos): # return the value of a move played by player
-
     # see what diameter cc this move would create
     neighbor_diameters = []
     for ne in NEIGHBOR_LIST[pos]:
@@ -103,7 +115,7 @@ def eval_move(board_copy, player, pos): # return the value of a move played by p
 
 
     if (new_diameter == 5): return -1
-    if (new_diameter == 4 and max(neighbor_diameters) < 4 and sum(neighbor_diameters) != 9): return 15
+    if (new_diameter == 4 and max(neighbor_diameters) < 4 and sum(neighbor_diameters) != 9): return len(board_copy) // 3 - 5
     if (new_diameter == 3 and max(neighbor_diameters) < 3): return 2
     if (new_diameter >= 4 and 4 in neighbor_diameters): return -1
 
@@ -126,7 +138,12 @@ def eval_move(board_copy, player, pos): # return the value of a move played by p
             step_pos, jump_pos = tuple(step_pos), tuple(jump_pos)
 
             if (step_pos not in board_copy and jump_pos in board_copy and board_copy[jump_pos] == player):
-                val += 1
+                if (diameters[jump_pos] >= 3): 
+                    # print('bad')
+                    val -= 1
+                else: 
+                    # print('good')
+                    val += 1
     
     return val
 
@@ -134,8 +151,16 @@ def eval_move(board_copy, player, pos): # return the value of a move played by p
     
 
 def strat_1_move(board_copy, player):
-    print(len(board_copy))
-    
+    diameters.clear()
+
+    visit = {p:0 for p in node_coordinates}
+    for node in board_copy:
+        if not visit[node] and node in board_copy:
+            get_diameter(board_copy, node, visit, True)
+
+    print('Diameters:', diameters, '\n', file=open('debug.txt', 'a'))
+
+
     maxscore = 0
     moves = []
 
