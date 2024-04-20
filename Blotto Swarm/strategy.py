@@ -56,6 +56,17 @@ def random_strategy(ally: list, enemy: list, offset: int) -> int:
     # A random strategy to use in your game
     return random.randint(-1, 1)
 
+def offset(ally: list, enemy: list, offset: int) -> int:
+    return offset
+
+def lol(ally: list, enemy: list, offset: int) -> int:
+    if (offset != 0): return 1
+    if (offset == 0 and ally[3] > enemy[3] + 2):
+        r = random.uniform(0, ally[3])
+        return 1 if r < (ally[3] - 6) / 2 else 0
+    return 0
+
+
 
 def get_strategies():
     """
@@ -66,6 +77,6 @@ def get_strategies():
 
     In the official grader, only the first element of the list will be used as your strategy.
     """
-    strategies = [weighted_randomv2, weighted_random]
+    strategies = [lol, offset]
 
     return strategies

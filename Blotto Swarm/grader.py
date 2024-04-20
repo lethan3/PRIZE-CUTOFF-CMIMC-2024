@@ -60,6 +60,9 @@ class BlottoSwarmGame:
                 self.pts[0] += 1
             elif soldiers1 > soldiers0:
                 self.pts[1] += 1
+        
+        # print('P1:', self.board[0])
+        # print('P2:', self.board[1], '\n')
 
     def scores(self) -> list:
         return self.pts
