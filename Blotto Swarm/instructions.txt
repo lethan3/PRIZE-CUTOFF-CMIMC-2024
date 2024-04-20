@@ -1,0 +1,4 @@
+Modify strategy.py with your strategy. 
+
+We provide a CLI accessible using `python3 grader.py`. Provide the help flag `-h`
+for more information on usage.

@@ -1,0 +1,8 @@
+We provide 2 CLIs to help you develop.
+
+`python3 dungeon-test.py` contains a CLI to run tests on your code
+`python3 dungeon-visual.py` contins a CLI to visualize your code using our visualizer.
+
+Please note that paths you provide are from the directory you are calling the
+CLI from. More instructions on usage of each CLI is available by providing the
+help option `-h` to the CLI.
