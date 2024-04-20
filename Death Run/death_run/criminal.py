@@ -57,16 +57,13 @@ class RandomCriminal(BaseCriminal):
             random.randint(0, budget),
         )
 
-class SmoothCriminal(BaseCriminal):
+class ConstrainingCriminal(BaseCriminal):
     def __init__(self, edge_list, begin, ends):
         self.edge_list = edge_list
         self.begin = begin
         self.ends = ends
         self.G = nx.DiGraph()
         self.G.add_weighted_edges_from(edge_list)
-        self.calculate_moves()
-
-    def calculate_moves(self):
 
     def process_updates(self, edge_updates):
         for upd in edge_updates:
@@ -76,12 +73,8 @@ class SmoothCriminal(BaseCriminal):
         populated_vertices = list(
             filter(lambda z: vertex_count[z], vertex_count.keys())
         )
-        vertex = random.choice(populated_vertices)
+        adj_possible = [(cv, x, vertex_count[cv]/(len(list(filter(lambda z: z[0] == cv, self.edge_list))) + 1)) for (cv, x, w) in filter(lambda z: z[0] in populated_vertices, self.edge_list)]
+        edge_chosen = random.choices([(z[0], z[1]) for z in adj_possible], weights=[z[2] for z in adj_possible], k=1)
         # Fill in random out-edge with random weight
-        return (
-            vertex,
-            random.choice(
-                [x for (_, x, _) in filter(lambda z: z[0] == vertex, self.edge_list)]
-            ),
-            random.randint(0, budget),
-        )
+        print(edge_chosen)
+        return (edge_chosen[0][0], edge_chosen[0][1], random.randint(0, budget))
