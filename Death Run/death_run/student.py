@@ -60,6 +60,35 @@ class RandomStudent(BaseStudent):
         print("random", v, w)
         return v
 
+class Greedy2Student(BaseStudent):
+
+    def __init__(self, edge_list, begin, ends):
+        self.edge_list = edge_list
+        self.begin = begin
+        self.ends = ends
+        self.G = nx.DiGraph()
+        self.G.add_weighted_edges_from(edge_list)
+
+    def process_updates(self, edge_updates):
+        for upd in edge_updates:
+            self.G[upd[0]][upd[1]]['weight'] += edge_updates[upd]
+
+    def strategy(self, edge_updates, vertex_count, current_vertex):
+        # Take the edge corresponding to the shortest path to any end vertex
+        self.process_updates(edge_updates)
+        glob_mn = INF
+        fin_vert = 0
+        for adj_vert in list(self.G.neighbors(current_vertex)):
+            mn = INF
+            for p in self.ends:
+                if not has_path(self.G, adj_vert, p):
+                    continue
+                mn = min(mn, shortest_path_length(self.G, adj_vert, p))
+                glob_mn = min(glob_mn, mn + self.G[current_vertex][adj_vert]['weight'])
+                if glob_mn == mn + self.G[current_vertex][adj_vert]['weight']:
+                    fin_vert = adj_vert
+        return fin_vert
+
 class GreedyStudent(BaseStudent):
 
     def __init__(self, edge_list, begin, ends):

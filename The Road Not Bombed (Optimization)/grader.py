@@ -1,13 +1,14 @@
 import random
 from strategy import Planner
+import time
 
 """
 Modify the parameters below for different tasks
 """
 
 # Task 1: p = 5, bd = 0.25
-p = 5  # number of cities
-bd = 0.25  # bomb density
+#p = 5  # number of cities
+#bd = 0.25  # bomb density
 
 # Task 2: p = 5, bd = 0.1
 # p = 5 # number of cities
@@ -18,11 +19,11 @@ bd = 0.25  # bomb density
 # bd = 0.25 # bomb density
 
 # Task 4: p = 1, bd = 0.1
-# p = 1 # number of cities
-# bd = 0.1 # bomb density
+p = 1 # number of cities
+bd = 0.1 # bomb density
 
 rng_grader = random.Random()  # use this for generating fixed setup
-rng_grader.seed(19260817)
+rng_grader.seed(time.time())
 
 VERBOSE = True  # print more details
 LAST = True  # whether to print the last query made in each TC
