@@ -70,8 +70,43 @@ def lol2electricboogaloo(ally: list, enemy: list, offset: int) -> int:
     castle_idx = 3+offset
     castle_dif = ally[castle_idx] - enemy[castle_idx]
     SOLDIER_CAP = 7
-    SAFE_PADDING = 2
-    CASTLE_DIF_CAP = 5
+    SAFE_PADDING = 1
+    CASTLE_DIF_CAP = 6
+    if (offset == 0):
+        
+        if enemy[3] > SOLDIER_CAP: # some max number before its not worth to win
+            return random.randchoice([-1, 1])
+
+        elif castle_dif > CASTLE_DIF_CAP: # some max number before its not worth to spend that much
+            return random.randchoice([0]*ally[3]+[1]*(castle_dif-2)//2+[-1]*(castle_dif-2)//2) # send away a few soldiers
+        
+        else:
+            return 0
+    
+    if (offset == 1): 
+        if enemy[castle_idx] > SOLDIER_CAP:
+            return -1
+        
+        elif castle_dif >= SAFE_PADDING:
+            return -1
+        
+        else:
+            return 1
+    
+    if (offset == -1):
+        if enemy[castle_idx] > SOLDIER_CAP:
+            return 1
+        
+        elif castle_dif >= SAFE_PADDING:
+            return 1
+        
+        else:
+            return -1
+        
+def lol2electricboogalootest(ally: list, enemy: list, offset: int, SOLDIER_CAP,SAFE_PADDING,CASTLE_DIF_CAP) -> int:
+    castle_idx = 3+offset
+    castle_dif = ally[castle_idx] - enemy[castle_idx]
+
     if (offset == 0):
         
         if enemy[3] > SOLDIER_CAP: # some max number before its not worth to win
@@ -115,6 +150,13 @@ def get_strategies():
 
     In the official grader, only the first element of the list will be used as your strategy.
     """
-    strategies = [lol2electricboogaloo, lol, offset]
+    strategies = [lol2electricboogaloo,lol,offset]
+    #strategies = []
+
+    #strategies.append(lambda ally, enemy, offset: lol2electricboogalootest(ally, enemy, offset, 7, 1, 5))
+    #strategies.append(lambda ally, enemy, offset: lol2electricboogalootest(ally, enemy, offset, 7, 2, 6))
+    #strategies.append(lambda ally, enemy, offset: lol2electricboogalootest(ally, enemy, offset, 7, 2, 5))
+    #strategies.append(lambda ally, enemy, offset: lol2electricboogalootest(ally, enemy, offset, 8, 2, 5))
+    
 
     return strategies
