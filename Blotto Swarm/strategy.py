@@ -150,7 +150,7 @@ def get_strategies():
 
     In the official grader, only the first element of the list will be used as your strategy.
     """
-    strategies = [lol,offset]
+    strategies = [lol2electricboogaloo,lol,offset]
     #strategies = []
 
     #strategies.append(lambda ally, enemy, offset: lol2electricboogalootest(ally, enemy, offset, 7, 1, 5))
