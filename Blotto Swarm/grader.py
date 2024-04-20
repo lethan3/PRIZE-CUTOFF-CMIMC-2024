@@ -54,7 +54,7 @@ class BlottoSwarmGame:
         castle_interval = self.GAP_SIZE + 1
         for i in range(self.NUM_CASTLES):
             soldiers0 = self.board[0][i * castle_interval]
-            soldiers1 = self.board[1][i * castle_interval + 1]
+            soldiers1 = self.board[1][i * castle_interval]
 
             if soldiers0 > soldiers1:
                 self.pts[0] += 1
@@ -70,7 +70,7 @@ class BlottoSwarmGrader:
     """
     NUM_DAYS = 100
 
-    def __init__(self, num_games: int = 10, debug = False):
+    def __init__(self, num_games: int = 20, debug = False):
         self.num_games = num_games # number of games to play per pair of strategies
         self.debug = debug
         self.strategies = get_strategies()
