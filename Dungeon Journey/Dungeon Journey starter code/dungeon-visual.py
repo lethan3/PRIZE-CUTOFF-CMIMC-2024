@@ -131,7 +131,7 @@ def simulate(table, alphabet, dungeon, alice, bob, screen):
 
                 key = event.key
                 if key == pygame.K_UP:
-                    if SIM_RATE < 50:
+                    if SIM_RATE < 1000000:
                         SIM_RATE *= 2
                 elif key == pygame.K_DOWN:
                     if SIM_RATE > 0.2:
