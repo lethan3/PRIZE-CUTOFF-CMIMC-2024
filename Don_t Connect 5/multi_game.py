@@ -10,7 +10,7 @@ os.chdir(dirname(abspath(__file__)))
 # Setting
 
 WRITE = True
-NGAME = 100
+NGAME = 1000
 DEBUG = True
 
 # file path
