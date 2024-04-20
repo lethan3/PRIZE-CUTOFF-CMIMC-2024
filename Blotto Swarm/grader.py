@@ -1,7 +1,9 @@
 import argparse
 from strategy import get_strategies
 import random
-import pygame
+import contextlib
+with contextlib.redirect_stdout(None):
+    import pygame
 
 class BlottoSwarmGame:
     NUM_CASTLES = 10
@@ -79,7 +81,7 @@ class BlottoSwarmGrader:
         self.debug = debug
         self.visualize = visualize
         self.screen = None
-        if self.visualize:
+        if False:
             pygame.init()
             self.screen = pygame.display.set_mode((800, 800))
             self.screen.fill((255, 255, 255))
@@ -123,10 +125,9 @@ class BlottoSwarmGrader:
                         game.move(team, i, move)
                 game.calc_score()
                 if self.visualize:
-                    print(strategy1.__name__, game.board[0])
-                    print(strategy2.__name__, game.board[1])
+                    print("strategy1:", game.board[0])
+                    print("strategy2:", game.board[1])
                     print(game.scores())
-                    self.view_current_state(game)
                     print()
                     input()
 

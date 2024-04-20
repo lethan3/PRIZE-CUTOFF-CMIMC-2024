@@ -66,6 +66,44 @@ def lol(ally: list, enemy: list, offset: int) -> int:
         return 1 if r < (ally[3] - 6) / 2 else 0
     return 0
 
+def lol2electricboogaloo(ally: list, enemy: list, offset: int) -> int:
+    castle_idx = 3+offset
+    castle_dif = ally[castle_idx] - enemy[castle_idx]
+    SOLDIER_CAP = 7
+    SAFE_PADDING = 2
+    CASTLE_DIF_CAP = 5
+    if (offset == 0):
+        
+        if enemy[3] > SOLDIER_CAP: # some max number before its not worth to win
+            return random.randchoice([-1, 1])
+
+        elif castle_dif > CASTLE_DIF_CAP: # some max number before its not worth to spend that much
+            return random.randchoice([0]*ally[3]+[1]*(castle_dif-2)//2+[-1]*(castle_dif-2)//2) # send away a few soldiers
+        
+        else:
+            return 0
+    
+    if (offset == 1): 
+        if enemy[castle_idx] > SOLDIER_CAP:
+            return -1
+        
+        elif castle_dif >= SAFE_PADDING:
+            return -1
+        
+        else:
+            return 1
+    
+    if (offset == -1):
+        if enemy[castle_idx] > SOLDIER_CAP:
+            return 1
+        
+        elif castle_dif >= SAFE_PADDING:
+            return 1
+        
+        else:
+            return -1
+
+
 
 
 def get_strategies():
@@ -77,6 +115,6 @@ def get_strategies():
 
     In the official grader, only the first element of the list will be used as your strategy.
     """
-    strategies = [lol, offset]
+    strategies = [lol2electricboogaloo, lol, offset]
 
     return strategies
