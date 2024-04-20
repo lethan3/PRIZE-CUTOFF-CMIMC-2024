@@ -140,7 +140,7 @@ def eval_move(board_copy, player, pos): # return the value of a move played by p
             if (step_pos not in board_copy and jump_pos in board_copy and board_copy[jump_pos] == player):
                 if (diameters[jump_pos] >= 3): 
                     # print('bad')
-                    val -= 1
+                    val -= 2
                 else: 
                     # print('good')
                     val += 1
