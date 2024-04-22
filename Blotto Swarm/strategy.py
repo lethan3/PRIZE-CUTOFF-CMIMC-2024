@@ -10,6 +10,36 @@ NOTE: Each soldier's memory in the final runner will be separate from the others
 WARNING: Do not print anything to stdout. It will break the grading script!
 """
 
+def boids(ally: list, enemy: list, offset: int) -> int:
+    SEPERATION_WEIGHT = 1
+    COHESION_WEIGHT = 1
+    netforce = 0
+    
+    left_sep = ally[0] + ally[1]
+    right_sep = ally[5] + ally[6]
+    cohesion = ally[2] + ally[3] + ally[4]
+    left_sep = left_sep/sum(ally)
+    right_sep = right_sep/sum(ally)
+    cohesion = cohesion/sum(ally)
+
+    netforce += -left_sep*SEPERATION_WEIGHT + right_sep*SEPERATION_WEIGHT + cohesion*COHESION_WEIGHT
+    netforce *= 3
+    print(netforce)
+
+    if offset == 0:
+        netforce /= 3
+    if offset == 1:
+        netforce+= 1
+    if offset == -1:
+        netforce-= 1
+
+    netforce += random.uniform(-1,1)
+    if netforce > 1:
+        return 1
+    if netforce < -1:
+        return -1
+    return 0
+
 def keep_2_per_castle(ally: list, enemy: list, offset: int) -> int:
     # Implement me!
     return 0
@@ -138,8 +168,11 @@ def lol2electricboogalootest(ally: list, enemy: list, offset: int, SOLDIER_CAP,S
         
         else:
             return -1
+test = 0
 
 def lol2electricboogalooV2(ally: list, enemy: list, offset: int) -> int:
+    global test
+    test =  random.randint(0,100)
     castle_idx = 3+offset
     castle_dif = ally[castle_idx] - enemy[castle_idx]
     SOLDIER_CAP = 7
@@ -206,35 +239,7 @@ def set_n_per_castle(ally: list, enemy: list, offset: int) -> int:
         else:
             return -1 if random.randint(0,ally[castle_idx+1]+ally[castle_idx-1]) < N-ally[castle_idx] else 1
 
-def boids(ally: list, enemy: list, offset: int) -> int:
-    SEPERATION_WEIGHT = 1
-    COHESION_WEIGHT = 1
-    netforce = 0
-    
-    left_sep = ally[0] + ally[1]
-    right_sep = ally[5] + ally[6]
-    cohesion = ally[2] + ally[3] + ally[4]
-    left_sep = left_sep/sum(ally)
-    right_sep = right_sep/sum(ally)
-    cohesion = cohesion/sum(ally)
 
-    netforce += -left_sep*SEPERATION_WEIGHT + right_sep*SEPERATION_WEIGHT + cohesion*COHESION_WEIGHT
-    netforce *= 3
-    print(netforce)
-
-    if offset == 0:
-        netforce /= 3
-    if offset == 1:
-        netforce+= 1
-    if offset == -1:
-        netforce-= 1
-
-    netforce += random.uniform(-1,1)
-    if netforce > 1:
-        return 1
-    if netforce < -1:
-        return -1
-    return 0
     
 
 def get_strategies():
@@ -246,7 +251,7 @@ def get_strategies():
 
     In the official grader, only the first element of the list will be used as your strategy.
     """
-    strategies = [boids,lol]
+    strategies = [lol2electricboogalooV2,set_n_per_castle]
     #strategies = []
 
     #strategies.append(lambda ally, enemy, offset: lol2electricboogalootest(ally, enemy, offset, 7, 1, 5))
