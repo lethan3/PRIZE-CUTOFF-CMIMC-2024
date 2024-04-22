@@ -1,6 +1,8 @@
 import random
 from strategy import Planner
 import time
+import argparse
+import math
 
 """
 Modify the parameters below for different tasks
@@ -25,16 +27,20 @@ bd = 0.1 # bomb density
 rng_grader = random.Random()  # use this for generating fixed setup
 rng_grader.seed(time.time())
 
-VERBOSE = True  # print more details
+VERBOSE = False  # print more details
 LAST = True  # whether to print the last query made in each TC
+NOTHING = False
+GEO_SCORE = 0
+TRUEGEO_SCORE = 1
+AVG_SCORE = 0
 n = 16  # board size is n*n
 q = 100  # number of queries
 
 
 def runGrader(soln, pairs, bombs):
+    global GEO_SCORE, AVG_SCORE, TRUEGEO_SCORE
     # pairs represented as array of length p, each element is a length 2 array of length 2 array of coordinates
     # bombs represented with n*m array, '1' denotes bomb, '0' denotes no bomb
-    print("Running")
     soln.setup(pairs, bd)
 
     queryOutputList = []
@@ -53,7 +59,10 @@ def runGrader(soln, pairs, bombs):
                 drawState(n, qloc, bombs, pairs, roadplan, score, queryOutputList)
     if qloc == 0 and LAST:
         drawState(n, qloc, bombs, pairs, roadplan, score, queryOutputList)
-    print(f"Best score: {bestScore}")
+    if not NOTHING: print(f"Best score: {bestScore}")
+    GEO_SCORE += math.log2(bestScore)
+    TRUEGEO_SCORE *= bestScore
+    AVG_SCORE += bestScore
     return bestScore
 
 
@@ -189,8 +198,80 @@ def dfsComponent(x, y, n, roads, visRoads):
     dfsComponent(x, y - 1, n, roads, visRoads)
     dfsComponent(x, y + 1, n, roads, visRoads)
 
+if __name__ == "__main__":
 
-soln = Planner()
-pairs, bombs = generateSetup(n, p, bd)
+    parser = argparse.ArgumentParser(description="The Road Not Bombed local runner CLI")
 
-runGrader(soln, pairs, bombs)
+    parser.add_argument("--task", "-t", type=int, default=0, help="Task number (1-4) [5, 0.25], [5, 0.1], [1, 0.25], [1, 0.1]")
+    parser.add_argument("--games", "-g", type=int, default=1, help="Number of games to run")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Print more details")
+    parser.add_argument("--silent", "-s", action="store_true", help="Print nothing")
+    parser.add_argument("--seed", "-sd", type=int, default=None, help="Random seed")
+    parser.add_argument("--png", "-p", type=str, default=None, help="png file for strategy")
+    parser.add_argument("--nothing", "-n", action="store_true", help="Do nothing")
+
+    args = parser.parse_args()
+
+    
+
+    if args.nothing:
+        NOTHING = True
+        VERBOSE = False
+        LAST = False
+
+    if args.seed:
+        rng_grader.seed(args.seed)
+
+    if args.verbose:
+        VERBOSE = True
+
+    if args.silent:
+        VERBOSE = False
+        LAST = False
+
+    tasks = []
+
+
+    if args.task == 1:
+        p = 5
+        bd = 0.25
+    elif args.task == 2:
+        p = 5
+        bd = 0.1
+    elif args.task == 3:
+        p = 1
+        bd = 0.25
+    elif args.task == 4:
+        p = 1
+        bd = 0.1
+    else:
+        p = 1
+        bd = 0.1
+        tasks = [[5, 0.25], [5, 0.1], [1, 0.25]]
+    tasks.append([p, bd])
+
+    soln = Planner()
+
+    
+
+    if args.png:
+        soln.load_png(args.png)
+
+    for task in tasks:
+        p, bd = task
+        GEO_SCORE = 0
+        AVG_SCORE = 0
+        TRUEGEO_SCORE = 1
+        if args.games > 50:
+            TRUEGEO_SCORE = 0
+        for i in range(args.games):
+            if not NOTHING: print(f"Game {i+1}         Task: {task}")
+            pairs, bombs = generateSetup(n, p, bd)
+            runGrader(soln, pairs, bombs)
+        print(f"Total Games: {args.games}         Task: {task}")
+        print('\x1b[0;31;40m'+f"Average Score: {AVG_SCORE/args.games}"+'\x1b[0m')
+        print('\x1b[0;31;40m'+f"Geometric Mean Score: {round(2**(GEO_SCORE/args.games),2)}"+'\x1b[0m')
+        print('\x1b[0;31;40m'+f"True Geometric Mean Score: {round(TRUEGEO_SCORE**(1/args.games),2)}"+'\x1b[0m')
+        print("-"*50)
+
+        

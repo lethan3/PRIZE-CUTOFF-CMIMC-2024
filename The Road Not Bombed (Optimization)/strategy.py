@@ -1,5 +1,6 @@
 import random
-
+from PIL import Image
+import string
 
 class Planner:
     def setup(self, pairs, bd):
@@ -12,6 +13,8 @@ class Planner:
         self.border_width = 0
         self.good_border = False
         self.necessary = []
+        self.tiles = None
+        self.grid = None
         return
     
     def rand_dist_from_border(self, dist):
@@ -25,6 +28,45 @@ class Planner:
             return (random.randint(dist - 1, self.n - dist), dist - 1)
         else:
             return (random.randint(dist - 1, self.n - dist), self.n - dist)
+
+    def load_png(self, image_path):
+        image = Image.open(image_path)
+        width, height = image.size
+        assert width == 16 and height == 16, "Image must be 16x16"
+        tiles = []
+        visted = [[False for i in range(16)] for j in range(16)]
+        names = string.ascii_lowercase+string.ascii_uppercase+string.digits
+        idx = 0
+
+        for y in range(0, height):
+            for x in range(0, width):
+                if not visted[y][x]:
+                    color = image.getpixel((x, y))
+                    section = []
+                    stack = [(y, x)]
+                    while stack:
+                        y1, x1 = stack.pop()
+                        if x1 < 0 or x1 >= width or y1 < 0 or y1 >= height or visted[y1][x1] or image.getpixel((x1, y1)) != color:
+                            continue
+                        visted[y1][x1] = True
+                        section.append((y1, x1))
+                        stack.append((y1 + 1, x1))
+                        stack.append((y1 - 1, x1))
+                        stack.append((y1, x1 + 1))
+                        stack.append((y1, x1 - 1))
+                    tiles.append(section)
+                    for y1, x1 in section:
+                        visted[y1][x1] = names[idx]
+                    idx += 1
+                    idx %= len(names)
+        
+        for k in visted:
+            print(*k)
+
+        for k in tiles:
+            print(*k)
+        self.tiles = tiles
+        self.grid = visted
 
 
     def task1(self, q, queryOutputs):  # p = 5, bd = 0.25
