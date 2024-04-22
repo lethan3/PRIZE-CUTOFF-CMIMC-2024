@@ -202,7 +202,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="The Road Not Bombed local runner CLI")
 
-    parser.add_argument("--task", "-t", type=int, default=0, help="Task number (1-4) [5, 0.25], [5, 0.1], [1, 0.25], [1, 0.1]")
+    parser.add_argument("--task", "-t", type=int, default=0, help="Task number (1-5) [5, 0.25], [5, 0.1], [1, 0.25], [1, 0.1], [1, 0]")
     parser.add_argument("--games", "-g", type=int, default=1, help="Number of games to run")
     parser.add_argument("--verbose", "-v", action="store_true", help="Print more details")
     parser.add_argument("--silent", "-s", action="store_true", help="Print nothing")
@@ -244,6 +244,9 @@ if __name__ == "__main__":
     elif args.task == 4:
         p = 1
         bd = 0.1
+    elif args.task == 5:
+        p = 1
+        bd = 0  
     else:
         p = 1
         bd = 0.1

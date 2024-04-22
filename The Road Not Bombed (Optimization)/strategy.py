@@ -17,6 +17,32 @@ class Planner:
         self.grid = None
         return
     
+    def lerp(self, city1, city2, width, tolerance=2, width_tolerance=0.5):
+        grid = [[0] * self.n for i in range(self.n)]
+        #calculate line with ax + by + c = 0
+        a = city2[1] - city1[1]
+        b = city1[0] - city2[0]
+        c = -a * city1[0] - b * city1[1]
+
+        assert a * city1[0] + b * city1[1] + c == 0
+        assert a * city2[0] + b * city2[1] + c == 0
+
+        minx = min(city1[0], city2[0])
+        maxx = max(city1[0], city2[0])
+        miny = min(city1[1], city2[1])
+        maxy = max(city1[1], city2[1])
+
+        for i in range(self.n):
+            for j in range(self.n):
+                # distance(ax + by + c, (x0,y0)) = |ax0 + by0 + c|/√(a^2 + b^2)
+                dist = abs(a * i + b * j + c) / ((a ** 2 + b ** 2) ** 0.5)
+                
+                #make sure point is within bewteen the two cities with some tolerance
+                if minx - tolerance <= i <= maxx + tolerance and miny - tolerance <= j <= maxy + tolerance:
+                    if dist-width_tolerance <= width/2:
+                        grid[i][j] = 1
+        return grid
+    
     def rand_dist_from_border(self, dist):
         dist = random.randint(1, dist)
         r = random.randint(0, 3)
@@ -126,29 +152,54 @@ class Planner:
     def task3(self, q, queryOutputs): # p = 1, bd = 0.25
         return self.task1(q, queryOutputs)
 
+
+    
+
     def task4(self, q, queryOutputs): # p = 1, bd = 0.1
+        # check if pairs are in the same row or column
+        if (q==2): return self.lerp(self.pairs[0][0], self.pairs[0][1], 2, 1)
+        if (q==1): return self.lerp(self.pairs[0][0], self.pairs[0][1], 1, 0)
+
+
         return self.task1(q, queryOutputs)
-        # x1, y1 = self.pairs[0][0] # first 
-        # x2, y2 = self.pairs[0][1] # second pair
-        # if(x1 > x2):
-        #     x1, x2 = x2, x1
-        #     y1, y2 = y2, y1
-        # plan = [[0] * self.n for i in range(self.n)]
-        # #make 3 wide road from x1 to x2
-        # for i in range(x1, x2 + 1):
-        #     for j in range(max(y1 - 1,0), min(y1 + 2,16)):
-        #         plan[i][j] = 1
-        
-        # #make 3 wide road from y1 to y2
-        # if(y1 > y2):
-        #     y1, y2 = y2, y1
-        # for i in range(max(x2 - 1,0), min(x2 + 2,16)):
-        #     for j in range(y1, y2 + 1):
-        #         plan[i][j] = 1
+
+        if self.pairs[0][0][0] == self.pairs[0][1][0] or self.pairs[0][0][1] == self.pairs[0][1][1]:
+            return self.task4_same_row(q)
             
-
-
+    def task4_same_row(self, q):
+        ...
         # return plan
+
+    def theoretical_max(self, q, queryOutputs):
+        x1, y1 = self.pairs[0][0]
+        x2, y2 = self.pairs[0][1]
+        # draw right angle between the two points
+        if x1 > x2:
+            x1, x2 = x2, x1
+        if y1 > y2:
+            y1, y2 = y2, y1
+        plan = [[0] * self.n for i in range(self.n)]
+        if q%4 == 1:
+            for i in range(x1, x2 + 1):
+                plan[i][y1] = 1
+            for i in range(y1, y2 + 1):
+                plan[x2][i] = 1
+        elif q%4 == 2:
+            for i in range(x1, x2 + 1):
+                plan[i][y2] = 1
+            for i in range(y1, y2 + 1):
+                plan[x1][i] = 1
+        elif q%4 == 3:
+            for i in range(x1, x2 + 1):
+                plan[i][y2] = 1
+            for i in range(y1, y2 + 1):
+                plan[x2][i] = 1
+        else:
+            for i in range(x1, x2 + 1):
+                plan[i][y1] = 1
+            for i in range(y1, y2 + 1):
+                plan[x1][i] = 1
+        return plan
 
     def query(self, q, queryOutputs):
         # feel free to modify this function, this is just a suggestion
@@ -163,4 +214,7 @@ class Planner:
         
         if len(self.pairs) == 1 and self.bd == 0.1:
             return self.task4(q, queryOutputs)
+        
+        if len(self.pairs) == 1 and self.bd == 0:
+            return self.theoretical_max(q, queryOutputs)
         
