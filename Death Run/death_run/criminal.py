@@ -152,3 +152,91 @@ class MiffedCriminal(BaseCriminal):
             ),
             0,
         )
+
+
+class CrowdCriminal(BaseCriminal):
+    def __init__(self, edge_list, begin, ends):
+        self.edge_list = edge_list
+        self.begin = begin
+        self.ends = ends
+        self.G = nx.DiGraph()
+        self.G.add_weighted_edges_from(edge_list)
+
+    def process_updates(self, edge_updates):
+        for upd in edge_updates:
+            self.G[upd[0]][upd[1]]['weight'] += edge_updates[upd]
+    def strategy(self, edge_updates, vertex_count, budget):
+        # Add to the smallest edge adjacent to a crowded vertex
+        populated_vertices = list(
+            filter(lambda z: vertex_count[z], vertex_count.keys())
+        )
+        pos_verts = [v for v in filter(lambda z: len(list(self.G.neighbors(z))) <= 3, populated_vertices)]
+        if len(pos_verts) > 0:
+            fin_vert = 0
+            vc = 0
+            for v in pos_verts:
+                if vertex_count[v] > vc:
+                    vc = vertex_count[v]
+                    fin_vert = v
+            return (fin_vert, list(self.G.neighbors(fin_vert))[0], random.randint(0,budget))
+        print(pos_verts)
+
+        vertex = random.choice(populated_vertices)
+        # Fill in random out-edge with random weight
+        return (
+            vertex,
+            random.choice(
+                [x for (_, x, _) in filter(lambda z: z[0] == vertex, self.edge_list)]
+            ),
+            0,
+        )
+
+class CooldownCriminal(BaseCriminal):
+    def __init__(self, edge_list, begin, ends):
+        self.edge_list = edge_list
+        self.begin = begin
+        self.ends = ends
+        self.G = nx.DiGraph()
+        self.G.add_weighted_edges_from(edge_list)
+
+    def process_updates(self, edge_updates):
+        for upd in edge_updates:
+            self.G[upd[0]][upd[1]]['weight'] += edge_updates[upd]
+    def strategy(self, edge_updates, vertex_count, budget):
+        # Find a random populated vertex
+        populated_vertices = list(
+            filter(lambda z: vertex_count[z], vertex_count.keys())
+        )
+        ok = 0
+        for v in list(self.G.neighbors(populated_vertices[0])):
+            if len(list(self.G.neighbors(v))) == 0:
+                ok = 1
+        if ok == 1:
+            cur = random.choice(populated_vertices)
+            return (
+                cur,
+                random.choice(
+                    [x for (_, x, _) in filter(lambda z: z[0] == cur, self.edge_list)]
+                ),
+                budget
+            )
+        pos_verts = [v for v in filter(lambda z: len(list(self.G.neighbors(z))) == 1, populated_vertices)]
+        if len(pos_verts) > 0:
+            fin_vert = 0
+            vc = 0
+            for v in pos_verts:
+                if vertex_count[v] > vc:
+                    vc = vertex_count[v]
+                    fin_vert = v
+            return (fin_vert, list(self.G.neighbors(fin_vert))[0], budget)
+        print(pos_verts)
+
+        vertex = random.choice(populated_vertices)
+        # Fill in random out-edge with random weight
+        return (
+            vertex,
+            random.choice(
+                [x for (_, x, _) in filter(lambda z: z[0] == vertex, self.edge_list)]
+            ),
+            0,
+        )
