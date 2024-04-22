@@ -119,7 +119,7 @@ def main():
                 success = False
                 otp = testcase["output"]
                 if not halts:
-                    print("Program failed. " + errormessage)
+                    print("Program failed. " + errormessage + " test case: " + str(testcase))
                 else:
                     success = True
                     for x, y, z in otp:
