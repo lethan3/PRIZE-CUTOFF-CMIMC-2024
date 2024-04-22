@@ -1,6 +1,7 @@
 import random
 from PIL import Image
 import string
+import copy
 
 class Planner:
     def setup(self, pairs, bd):
@@ -11,50 +12,14 @@ class Planner:
         self.bestPlan = [[1] * self.n for i in range(self.n)]
         self.sentPlan = []
         self.border_width = 0
+        self.line_width = 0
         self.good_border = False
+        self.good_line = False
         self.necessary = []
         self.tiles = None
         self.grid = None
         return
     
-    def lerp(self, city1, city2, width, tolerance=2, width_tolerance=0.5):
-        grid = [[0] * self.n for i in range(self.n)]
-        #calculate line with ax + by + c = 0
-        a = city2[1] - city1[1]
-        b = city1[0] - city2[0]
-        c = -a * city1[0] - b * city1[1]
-
-        assert a * city1[0] + b * city1[1] + c == 0
-        assert a * city2[0] + b * city2[1] + c == 0
-
-        minx = min(city1[0], city2[0])
-        maxx = max(city1[0], city2[0])
-        miny = min(city1[1], city2[1])
-        maxy = max(city1[1], city2[1])
-
-        for i in range(self.n):
-            for j in range(self.n):
-                # distance(ax + by + c, (x0,y0)) = |ax0 + by0 + c|/√(a^2 + b^2)
-                dist = abs(a * i + b * j + c) / ((a ** 2 + b ** 2) ** 0.5)
-                
-                #make sure point is within bewteen the two cities with some tolerance
-                if minx - tolerance <= i <= maxx + tolerance and miny - tolerance <= j <= maxy + tolerance:
-                    if dist-width_tolerance <= width/2:
-                        grid[i][j] = 1
-        return grid
-    
-    def rand_dist_from_border(self, dist):
-        dist = random.randint(1, dist)
-        r = random.randint(0, 3)
-        if (r == 0):
-            return (dist - 1, random.randint(dist - 1, self.n - dist))
-        elif (r == 1):
-            return (self.n - dist, random.randint(dist - 1, self.n - dist))
-        elif (r == 2):
-            return (random.randint(dist - 1, self.n - dist), dist - 1)
-        else:
-            return (random.randint(dist - 1, self.n - dist), self.n - dist)
-
     def load_png(self, image_path):
         image = Image.open(image_path)
         width, height = image.size
@@ -93,28 +58,154 @@ class Planner:
             print(*k)
         self.tiles = tiles
         self.grid = visted
+    
+    def lerp(self, city1, city2, width, tolerance=2, width_tolerance=0.5):
+        grid = [[0] * self.n for i in range(self.n)]
+        #calculate line with ax + by + c = 0
+        a = city2[1] - city1[1]
+        b = city1[0] - city2[0]
+        c = -a * city1[0] - b * city1[1]
+
+        assert a * city1[0] + b * city1[1] + c == 0
+        assert a * city2[0] + b * city2[1] + c == 0
+
+        minx = min(city1[0], city2[0])
+        maxx = max(city1[0], city2[0])
+        miny = min(city1[1], city2[1])
+        maxy = max(city1[1], city2[1])
+
+        for i in range(self.n):
+            for j in range(self.n):
+                # distance(ax + by + c, (x0,y0)) = |ax0 + by0 + c|/√(a^2 + b^2)
+                dist = abs(a * i + b * j + c) / ((a ** 2 + b ** 2) ** 0.5)
+                
+                #make sure point is within bewteen the two cities with some tolerance
+                if minx - tolerance <= i <= maxx + tolerance and miny - tolerance <= j <= maxy + tolerance:
+                    if dist-width_tolerance <= width/2:
+                        grid[i][j] = 1
+        return grid
+    
+    def lerp_manhatt(self, city1, city2, width, tolerance=2, width_tolerance=0.5):
+        grid = [[0] * self.n for i in range(self.n)]
+        
+        if(city1[0] < city2[0]):
+            city1, city2 = city2, city1
+
+        cur = city1
+        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+
+        while cur[0] != city2[0] or cur[1] != city2[1]:
+            min_dist = 100000
+            min_dir = None
+            for dir in directions:
+                new_city = (cur[0] + dir[0], cur[1] + dir[1])
+                #check if new city is within bounds
+                if new_city[0] < 0 or new_city[0] >= self.n or new_city[1] < 0 or new_city[1] >= self.n:
+                    continue
+                dist = (new_city[0] - city2[0]) ** 2 + (new_city[1] - city2[1]) ** 2
+                if dist < min_dist:
+                    min_dist = dist
+                    min_dir = dir
+            cur = [cur[0] + min_dir[0], cur[1] + min_dir[1]]
+            grid[cur[0]][cur[1]] = 1
+
+        #go through the grid and padding the road with width
+        for i in range(self.n):
+            for j in range(self.n):
+                if grid[i][j] == 1:
+                    for k in range(-width//2, width//2):
+                        for l in range(-width//2, width//2):
+                            if i + k < 0 or i + k >= self.n or j + l < 0 or j + l >= self.n:
+                                continue
+                            grid[i + k][j + l] = 1
+
+        return grid
 
 
-    def task1(self, q, queryOutputs):  # p = 5, bd = 0.25
+    def bresenham(self, city1, city2): 
+        if city1[0] > city2[0]:
+            city1, city2 = city2, city1
+        x1, y1 = city1
+        x2, y2 = city2
+        m_new = 2 * (y2 - y1) 
+        slope_error_new = m_new - (x2 - x1) 
+    
+        y = y1 
+        points = []
+        for x in range(x1, x2+1): 
+    
+            points.append((x, y))
+    
+            # Add slope to increment angle formed 
+            slope_error_new = slope_error_new + m_new 
+    
+            # Slope error reached limit, time to 
+            # increment y and update slope error. 
+            if (slope_error_new >= 0): 
+                y = y+1
+                slope_error_new = slope_error_new - 2 * (x2 - x1) 
+
+        grid = [[0] * self.n for i in range(self.n)]
+        for x, y in points:
+            grid[x][y] = 1
+        return grid
+    
+    def rand_dist_from_border(self, dist):
+        dist = random.randint(1, dist)
+        r = random.randint(0, 3)
+        if (r == 0):
+            return (dist - 1, random.randint(dist - 1, self.n - dist))
+        elif (r == 1):
+            return (self.n - dist, random.randint(dist - 1, self.n - dist))
+        elif (r == 2):
+            return (random.randint(dist - 1, self.n - dist), dist - 1)
+        else:
+            return (random.randint(dist - 1, self.n - dist), self.n - dist)
+        
+    def border_roads(self, plan):
+        roads = []
+        dirs = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+        for i in range(self.n):
+            for j in range(self.n):
+                if plan[i][j] == 1:
+                    for dir in dirs:
+                        x, y = i + dir[0], j + dir[1]
+                        if x < 0 or x >= self.n or y < 0 or y >= self.n:
+                            roads.append((i, j))
+                            break
+                        if plan[x][y] == 0:
+                            roads.append((i, j))
+                            break
+
+        return roads
+
+    
+
+
+    def generate_border(self, width):
+        plan = [[0] * self.n for i in range(self.n)]
+        for i in range(self.n):
+            for j in range(self.n):
+                if (i < width or self.n - i <= width) or (j < width or self.n - j <= width):
+                    plan[i][j] = 1
+        return plan
+
+
+    def shave_from_border(self, q, queryOutputs):
         if not self.good_border:
             if len(queryOutputs) == 0 or not queryOutputs[-1]:
                 self.border_width += 1
-                self.sentPlan = [[0] * self.n for i in range(self.n)]
-
-                for i in range(self.n):
-                    for j in range(self.n):
-                        if (i < self.border_width or self.n - i <= self.border_width) or (j < self.border_width or self.n - j <= self.border_width):
-                            self.sentPlan[i][j] = 1
+                self.sentPlan = self.generate_border(self.border_width)
                 return self.sentPlan
             else:
                 self.good_border = True
 
         if queryOutputs[-1]:
-            self.bestPlan = [[self.sentPlan[i][j] for j in range(self.n)] for i in range(self.n)]
+            self.bestPlan = copy.deepcopy(self.sentPlan)
         else:
             self.necessary.append(self.last_rmv)
         
-        self.sentPlan = [[self.bestPlan[i][j] for j in range(self.n)] for i in range(self.n)]
+        self.sentPlan = copy.deepcopy(self.bestPlan)
 
         del_i, del_j = self.rand_dist_from_border(self.border_width)
 
@@ -125,6 +216,81 @@ class Planner:
         self.sentPlan[del_i][del_j] = False
         self.last_rmv = (del_i, del_j)
         return self.sentPlan
+    
+    def shave_from_border_v2(self, q, queryOutputs):
+        if not self.good_border:
+            if len(queryOutputs) == 0 or not queryOutputs[-1]:
+                self.border_width += 1
+                self.sentPlan = self.generate_border(self.border_width)
+                return self.sentPlan
+            else:
+                self.good_border = True
+
+        if queryOutputs[-1]:
+            self.bestPlan = copy.deepcopy(self.sentPlan)
+        else:
+            self.necessary.append(self.last_rmv)
+        
+        self.sentPlan = copy.deepcopy(self.bestPlan)
+
+        del_i, del_j = self.rand_dist_from_border(self.border_width)
+
+        while not self.sentPlan[del_i][del_j] and not (del_i, del_j) in self.necessary:
+            # print(del_i, del_j)
+            del_i, del_j = self.rand_dist_from_border(self.border_width)
+
+        self.sentPlan[del_i][del_j] = False
+        self.last_rmv = (del_i, del_j)
+        plan = [[0] * self.n for i in range(self.n)]
+        #flood fill from city1
+        cur = self.pairs[0][0]
+        stack = [cur]
+        while stack:
+            x, y = stack.pop()
+            if x < 0 or x >= self.n or y < 0 or y >= self.n or plan[x][y] == 1:
+                continue
+            if self.sentPlan[x][y] == 0:
+                continue
+            plan[x][y] = 1
+            stack.append((x + 1, y))
+            stack.append((x - 1, y))
+            stack.append((x, y + 1))
+            stack.append((x, y - 1))
+
+        self.sentPlan = plan
+        return self.sentPlan
+    
+    def shave_from_line(self, q, queryOutputs):
+        if not self.good_line or q == 100:
+            if len(queryOutputs) == 0 or not queryOutputs[-1]:
+                self.line_width += 1
+                self.sentPlan = self.lerp(self.pairs[0][0], self.pairs[0][1], self.line_width, 1)
+                return self.sentPlan
+            else:
+                self.good_line = True
+
+        if queryOutputs[-1]:
+            self.bestPlan = copy.deepcopy(self.sentPlan)
+        else:
+            self.necessary.append(self.last_rmv)
+        
+        self.sentPlan = copy.deepcopy(self.bestPlan)
+
+        points_on_border = self.border_roads(self.sentPlan)
+
+        del_i, del_j = random.choice(points_on_border)
+
+        while not self.sentPlan[del_i][del_j] and not (del_i, del_j) in self.necessary:
+            # print(del_i, del_j)
+            del_i, del_j = random.choice(points_on_border)
+
+        self.sentPlan[del_i][del_j] = False
+        self.last_rmv = (del_i, del_j)
+        return self.sentPlan
+    
+
+    def task1(self, q, queryOutputs):  # p = 5, bd = 0.25
+        return self.shave_from_border_v2(q, queryOutputs)
 
         # # print(queryOutputs)
         # l = len(queryOutputs)
@@ -150,7 +316,11 @@ class Planner:
         return self.task1(q, queryOutputs)
 
     def task3(self, q, queryOutputs): # p = 1, bd = 0.25
-        return self.task1(q, queryOutputs)
+        if (q==2): return self.lerp(self.pairs[0][0], self.pairs[0][1], 2, 1)
+        if (q==1): return self.lerp(self.pairs[0][0], self.pairs[0][1], 1, 0)
+
+
+        return self.shave_from_line(q, queryOutputs)
 
 
     
@@ -161,16 +331,15 @@ class Planner:
         if (q==1): return self.lerp(self.pairs[0][0], self.pairs[0][1], 1, 0)
 
 
-        return self.task1(q, queryOutputs)
+        return self.shave_from_line(q, queryOutputs)
 
-        if self.pairs[0][0][0] == self.pairs[0][1][0] or self.pairs[0][0][1] == self.pairs[0][1][1]:
-            return self.task4_same_row(q)
             
     def task4_same_row(self, q):
         ...
         # return plan
 
     def theoretical_max(self, q, queryOutputs):
+        if(q==1): return self.lerp_manhatt(self.pairs[0][0], self.pairs[0][1],0)
         x1, y1 = self.pairs[0][0]
         x2, y2 = self.pairs[0][1]
         # draw right angle between the two points

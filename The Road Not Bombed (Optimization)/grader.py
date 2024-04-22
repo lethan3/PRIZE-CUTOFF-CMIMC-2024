@@ -3,6 +3,7 @@ from strategy import Planner
 import time
 import argparse
 import math
+import copy
 
 """
 Modify the parameters below for different tasks
@@ -198,6 +199,35 @@ def dfsComponent(x, y, n, roads, visRoads):
     dfsComponent(x, y - 1, n, roads, visRoads)
     dfsComponent(x, y + 1, n, roads, visRoads)
 
+def shortest_path_length(pairs, bombs):
+    n = len(bombs)
+    p = len(pairs)
+    roadsBuilt = 0  # score
+    visited = copy.deepcopy(bombs)
+    cur = [pairs[0][0],1]
+    visited[cur[0][0]][cur[0][1]] = 1
+    queue = [cur]
+    while len(queue) > 0:
+        cur = queue.pop(0)
+        x, y = cur[0]
+        if x == pairs[0][1][0] and y == pairs[0][1][1]:
+            return cur[1]
+        if x > 0 and visited[x-1][y] == 0:
+            queue.append([[x-1, y], cur[1]+1])
+            visited[x-1][y] = 1
+        if x < n-1 and visited[x+1][y] == 0:
+            queue.append([[x+1, y], cur[1]+1])
+            visited[x+1][y] = 1
+        if y > 0 and visited[x][y-1] == 0:
+            queue.append([[x, y-1], cur[1]+1])
+            visited[x][y-1] = 1
+        if y < n-1 and visited[x][y+1] == 0:
+            queue.append([[x, y+1], cur[1]+1])
+            visited[x][y+1] = 1
+    return -1
+
+    
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="The Road Not Bombed local runner CLI")
@@ -205,22 +235,63 @@ if __name__ == "__main__":
     parser.add_argument("--task", "-t", type=int, default=0, help="Task number (1-5) [5, 0.25], [5, 0.1], [1, 0.25], [1, 0.1], [1, 0]")
     parser.add_argument("--games", "-g", type=int, default=1, help="Number of games to run")
     parser.add_argument("--verbose", "-v", action="store_true", help="Print more details")
-    parser.add_argument("--silent", "-s", action="store_true", help="Print nothing")
+    parser.add_argument("--silent", "-s", action="store_true", help="Don't print game states")
     parser.add_argument("--seed", "-sd", type=int, default=None, help="Random seed")
     parser.add_argument("--png", "-p", type=str, default=None, help="png file for strategy")
-    parser.add_argument("--nothing", "-n", action="store_true", help="Do nothing")
+    parser.add_argument("--nothing", "-n", action="store_true", help="Only print final scores")
+    parser.add_argument("--optimal", "-o", action="store_true", help="Gives average perfect solution if board is known")
 
     args = parser.parse_args()
 
+    if args.seed:
+        rng_grader.seed(args.seed)
+    
+    if args.optimal:
+        p, bd = 1, 0.25
+        GEO_SCORE = 0
+        AVG_SCORE = 0
+        TRUEGEO_SCORE = 1
+        if args.games > 50:
+            TRUEGEO_SCORE = 0
+
+        for i in range(args.games):
+            pairs, bombs = generateSetup(n, p, bd)
+            length = shortest_path_length(pairs, bombs)
+            AVG_SCORE += length
+            GEO_SCORE += math.log2(length)
+            TRUEGEO_SCORE *= length
+        
+        print(f"Total Games: {args.games}         Task: [1, 0.25]")
+        print('\x1b[0;31;40m'+f"Average Score: {AVG_SCORE/args.games}"+'\x1b[0m')
+        print('\x1b[0;31;40m'+f"Geometric Mean Score: {round(2**(GEO_SCORE/args.games),2)}"+'\x1b[0m')
+        print('\x1b[0;31;40m'+f"True Geometric Mean Score: {round(TRUEGEO_SCORE**(1/args.games),2)}"+'\x1b[0m')
+        print("-"*50)
+        p, bd = 1, 0.1
+        GEO_SCORE = 0
+        AVG_SCORE = 0
+        TRUEGEO_SCORE = 1
+        if args.games > 50:
+            TRUEGEO_SCORE = 0
+
+        for i in range(args.games):
+            pairs, bombs = generateSetup(n, p, bd)
+            length = shortest_path_length(pairs, bombs)
+            AVG_SCORE += length
+            GEO_SCORE += math.log2(length)
+            TRUEGEO_SCORE *= length
+        
+        print(f"Total Games: {args.games}         Task: [1, 0.1]")
+        print('\x1b[0;31;40m'+f"Average Score: {AVG_SCORE/args.games}"+'\x1b[0m')
+        print('\x1b[0;31;40m'+f"Geometric Mean Score: {round(2**(GEO_SCORE/args.games),2)}"+'\x1b[0m')
+        print('\x1b[0;31;40m'+f"True Geometric Mean Score: {round(TRUEGEO_SCORE**(1/args.games),2)}"+'\x1b[0m')
+        print("-"*50)
+        exit()
     
 
     if args.nothing:
         NOTHING = True
         VERBOSE = False
         LAST = False
-
-    if args.seed:
-        rng_grader.seed(args.seed)
 
     if args.verbose:
         VERBOSE = True
