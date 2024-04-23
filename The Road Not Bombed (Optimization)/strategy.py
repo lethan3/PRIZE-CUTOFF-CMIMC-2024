@@ -142,6 +142,47 @@ class Planner:
                 grid[x][y] = 1
 
         return grid
+    
+    def random_path(self, city1, city2, width):
+        grid = [[0] * self.n for i in range(self.n)]
+        if city1[0] > city2[0]:
+            city1, city2 = city2, city1
+        x1, y1 = city1
+        x2, y2 = city2
+        
+        cur = city1.copy()
+        while cur[0] != city2[0] or cur[1] != city2[1]:
+            grid[cur[0]][cur[1]] = 1
+            if cur[0] == city2[0]:
+                if y1 < y2:
+                    cur[1] += 1
+                else:
+                    cur[1] -= 1
+                continue
+            if cur[1] == city2[1]:
+                cur[0] += 1
+                continue
+            r = random.randint(0, 1)
+            if r == 0:
+                cur[0] += 1
+            else:
+                if y1 < y2:
+                    cur[1] += 1
+                else:
+                    cur[1] -= 1
+        
+        grid[cur[0]][cur[1]] = 1
+        
+        newgrid = copy.deepcopy(grid)
+        for i in range(self.n):
+            for j in range(self.n):
+                if grid[i][j] == 1:
+                    for k in range(-width//2, width//2):
+                        for l in range(-width//2, width//2):
+                            if i + k < 0 or i + k >= self.n or j + l < 0 or j + l >= self.n:
+                                continue
+                            newgrid[i + k][j + l] = 1
+        return newgrid
 
     def bresenham(self, city1, city2): 
         if city1[0] > city2[0]:
@@ -517,8 +558,10 @@ class Planner:
 
     def task4(self, q, queryOutputs): # p = 1, bd = 0.1
         # check if pairs are in the same row or column
-
-        if(q > 50): return self.shave_from_right_angle_line_v2(q, queryOutputs)
+        if(q > 97): self.random_path(self.pairs[0][0], self.pairs[0][1], 2)
+        dist = (self.pairs[0][0][0] - self.pairs[0][1][0]) ** 2 + (self.pairs[0][0][1] - self.pairs[0][1][1]) ** 2
+        #self.random_path(self.pairs[0][0], self.pairs[0][1], 1)
+        if(dist >= 16): return self.shave_from_right_angle_line_v2(q, queryOutputs)
         return self.shave_from_line(q, queryOutputs)
 
             
@@ -527,8 +570,9 @@ class Planner:
         # return plan
 
     def theoretical_max(self, q, queryOutputs):
-        #if(q==1): return self.lerp_manhatt(self.pairs[0][0], self.pairs[0][1],0)
+        return self.random_path(self.pairs[0][0], self.pairs[0][1], 2)
         # draw right angle between the two points
+        
         return self.right_angle_path(self.pairs[0][0], self.pairs[0][1], 3)
 
     def query(self, q, queryOutputs):
