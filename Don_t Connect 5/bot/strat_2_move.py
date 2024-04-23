@@ -50,6 +50,8 @@ def get_diameter(board, start_node, visit):
 
     connected = dict()
     con(start_node)
+
+    # print(start_node, "len(connected)", len(connected))
     #print(connected)
     if len(connected) <= 3: # must be a line
         return len(connected)
@@ -61,7 +63,7 @@ def get_diameter(board, start_node, visit):
         three = list(connected.values())
         if 3 in connected.values():
             three.remove(3)
-            if 3 in connected.values():
+            if 3 in three:
                 return 4 # this is a shape x - x - x - x
                         #                     x   x
         return 5 # diameter is 5 otherwise
@@ -136,8 +138,10 @@ def see_move(board_copy, player, pos): # see if move ruins, builds 4, builds 3, 
     board_new[pos] = player
 
     visit = {p:0 for p in node_coordinates}
+    
+    # print("QUERYING", pos)
     new_diameter = get_diameter(board_new, pos, visit)
-    # print(pos, " diameter: ", new_diameter)
+    # print(" diameter: ", pos, new_diameter)
     
     if (new_diameter >= 5): return -1
     if (new_diameter == 4 and max(neighbor_diameters) < 4): return 4 
