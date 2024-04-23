@@ -204,6 +204,6 @@ def strat_2_move(board_copy, player):
 
     moves.append((0, 0, None))
     moves.sort()
-    print(moves[-1][2])
+    # print(moves[-1][2])
     return moves[-1][2]
     
