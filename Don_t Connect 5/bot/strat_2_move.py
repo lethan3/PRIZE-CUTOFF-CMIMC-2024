@@ -144,7 +144,7 @@ def see_move(board_copy, player, pos): # see if move ruins, builds 4, builds 3, 
     visit = {p:0 for p in node_coordinates}
     new_diameter = get_diameter(board_new, pos, visit)
     
-    if (new_diameter == 5): return -1
+    if (new_diameter >= 5): return -1
     if (new_diameter == 4 and max(neighbor_diameters) < 4): return 4 
     if (new_diameter == 3 and max(neighbor_diameters) < 3): return 3
     if (new_diameter == 2 and max(neighbor_diameters) < 2): return 2
