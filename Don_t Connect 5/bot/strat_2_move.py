@@ -1,4 +1,5 @@
 import random
+from collections import deque
 
 GRID_RADIUS = 4
 node_coordinates = []
@@ -16,9 +17,7 @@ for x in range(-GRID_RADIUS + 1, GRID_RADIUS + 1):
 
 NEIGHBOR_LIST = dict(zip(node_coordinates, [SELECT_VALID(ALL_NEIGHBOR(*(node))) for node in node_coordinates]))
 
-diameters = {}
-
-def get_diameter(board, start_node, visit, upd_diameters = False): 
+def get_diameter(board, start_node, visit): 
     def neighbors(node):
         #return SELECT_VALID(ALL_NEIGHBOR(*(node)))
         return NEIGHBOR_LIST[node]
@@ -79,9 +78,6 @@ def get_diameter(board, start_node, visit, upd_diameters = False):
     #     maxl = max(maxl, dfs(node))
     # return maxl
 
-    for node in connected:
-        diameters[node] = ret
-    
     return ret
 
 def score(board): # return current score for each player
@@ -94,8 +90,48 @@ def score(board): # return current score for each player
                 scores[board[pos]] += TABLE[d]
     return scores
 
-def eval_move(board_copy, player, pos): # return the value of a move played by player
-    # see what diameter cc this move would create
+def find_sabotage(board_copy, player):
+    found = [None, None, None]
+
+    visit_cc = {p:0 for p in node_coordinates}
+    visited = set()
+
+    for node in board_copy:
+        if (board_copy[node] == player or node in visited): continue
+
+        q = deque()
+        q.append((node, 0))
+        visited.add(node)
+
+        liberty = None
+        liberties = 0
+        while not len(q) == 0:
+            node, d = q[0]
+            q.popleft()
+            for ne in NEIGHBOR_LIST[node]:
+                if ne not in visited and ne in board_copy and board_copy[ne] == board_copy[node]:
+                    q.append((ne, d + 1))
+                    visited.add(ne)
+                if ne not in board_copy:
+                    liberties += 1
+                    liberty = ne
+
+        if (liberties == 1):
+            curr_diameter = get_diameter(board_copy, node, visit_cc)
+            board_new = board_copy.copy()
+            board_new[liberty] = board_copy[node]
+
+            visit = {p:0 for p in node_coordinates}
+            new_diameter = get_diameter(board_new, liberty, visit)
+            
+            if (curr_diameter < 4 and new_diameter == 4):
+                found[board_copy[node]] = liberty
+
+    return found
+
+
+
+def see_move(board_copy, player, pos): # see if move ruins, builds 4, builds 3, builds 2, or none
     neighbor_diameters = []
     for ne in NEIGHBOR_LIST[pos]:
         if (ne in board_copy and board_copy[ne] == player):
@@ -105,84 +141,69 @@ def eval_move(board_copy, player, pos): # return the value of a move played by p
     board_new = board_copy.copy()
     board_new[pos] = player
 
-    ferr = open('debug.txt', 'a')
-    if (len(board_new) < 16): print(board_new, file=ferr)
     visit = {p:0 for p in node_coordinates}
     new_diameter = get_diameter(board_new, pos, visit)
-    print(new_diameter, neighbor_diameters, file=ferr)
-
-    ferr.close()
-
-
+    
     if (new_diameter == 5): return -1
-    if (new_diameter == 4 and max(neighbor_diameters) < 4 and sum(neighbor_diameters) != 9): return len(board_copy) // 3 - 5
-    if (new_diameter == 3 and max(neighbor_diameters) < 3): return 2
-    if (new_diameter >= 4 and 4 in neighbor_diameters): return -1
+    if (new_diameter == 4 and max(neighbor_diameters) < 4): return 4 
+    if (new_diameter == 3 and max(neighbor_diameters) < 3): return 3
+    if (new_diameter == 2 and max(neighbor_diameters) < 2): return 2
+    return 1
 
-    # determine dist 2 score
+def openness_value(board_copy, player, pos): # return how open a cell is for expansion
+    q = deque()
+    q.append((pos, 0))
 
-    val = 0
-    for i in range(3):
-        for j in range(3):
-            if (i == j): continue
-            step_pos = [pos[0], pos[1], pos[2]] # dist 1
-            if (sum(pos) == 1):
-                step_pos[i] += 1
-            else:
-                step_pos[j] -= 1
-            
-            jump_pos = [pos[0], pos[1], pos[2]] # dist 2
-            jump_pos[i] += 1
-            jump_pos[j] -= 1
+    visited = set(pos)
 
-            step_pos, jump_pos = tuple(step_pos), tuple(jump_pos)
-
-            if (step_pos not in board_copy and jump_pos in board_copy and board_copy[jump_pos] == player):
-                if (diameters[jump_pos] >= 3): 
-                    # print('bad')
-                    val -= 2
-                else: 
-                    # print('good')
-                    val += 1
+    open_val = 0
+    while not len(q) == 0:
+        node, d = q[0]
+        q.popleft()
+        if (d != 0): open_val += 1 / d
+        for ne in NEIGHBOR_LIST[node]:
+            if ne not in visited and ne not in board_copy:
+                q.append((ne, d + 1))
+                visited.add(ne)
     
-    return val
+    return open_val
 
 
-    
 
-def strat_1_move(board_copy, player):
-    diameters.clear()
+def strat_2_move(board_copy, player):
+    # if have a move, take that
+    # if have a sabotage, take that
+    # else, take max(see_move, openness_value)
 
-    visit = {p:0 for p in node_coordinates}
-    for node in board_copy:
-        if not visit[node] and node in board_copy:
-            get_diameter(board_copy, node, visit, True)
-
-    print('Diameters:', diameters, '\n', file=open('debug.txt', 'a'))
-
-
-    maxscore = 0
-    moves = []
-
-    max_val = -1e9
     for node in node_coordinates:
         if node not in board_copy:
-            val = eval_move(board_copy, player, node)
+            val = see_move(board_copy, player, node)
+            if (val == 4):
+                return node
+    
+    fs = find_sabotage(board_copy, player)
+    sc = score(board_copy)
 
-            print("VAL:", val, file=open('debug.txt', 'a'))
-            if (val < max_val): continue
-            elif (val == max_val):
-                moves.append(node)
-            else:
-                moves.clear()
-                moves.append(node)
-                max_val = val
+    sab_move = None
+    for i in range(3):
+        if (i == player): continue
+        if (sc[i] == max(sc)):
+            sab_move = fs[i] if fs[i] is not None else sab_move
+        else:
+            sab_move = fs[i] if sab_move is None else sab_move
 
+    if sab_move is not None:
+        return sab_move
+    
+    moves = []
+    for node in node_coordinates:
+        if node not in board_copy:
+            val = see_move(board_copy, player, node)
+            ov = openness_value(board_copy, player, node)
+            moves.append((val, ov, node))
 
-    print('FINAL:', max_val, '\n', file=open('debug.txt', 'a'))
-    #print(maxscore)
-    #print(select)
-    if len(moves)==0:
-        return None
-    if max_val >= 0: return random.choice(moves)
-    else: return None
+    moves.append((0, 0, None))
+    moves.sort()
+
+    return moves[-1][2]
+    
