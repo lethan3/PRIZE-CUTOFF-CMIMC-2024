@@ -105,10 +105,10 @@ def lol2electricboogaloo(ally: list, enemy: list, offset: int) -> int:
     if (offset == 0):
         
         if enemy[3] > SOLDIER_CAP: # some max number before its not worth to win
-            return random.randchoice([-1, 1])
+            return random.choice([-1, 1])
 
         elif castle_dif > CASTLE_DIF_CAP: # some max number before its not worth to spend that much
-            return random.randchoice([0]*(ally[3]-castle_dif+1)+[1]*(castle_dif-2)//2+[-1]*(castle_dif-2)//2) # send away a few soldiers
+            return random.choice([0]*(ally[3]-castle_dif+1)+[1]*((castle_dif-2)//2)+[-1]*((castle_dif-2)//2)) # send away a few soldiers
         
         else:
             return 0
@@ -140,10 +140,10 @@ def lol2electricboogalootest(ally: list, enemy: list, offset: int, SOLDIER_CAP,S
     if (offset == 0):
         
         if enemy[3] > SOLDIER_CAP: # some max number before its not worth to win
-            return random.randchoice([-1, 1])
+            return random.choice([-1, 1])
 
         elif castle_dif > CASTLE_DIF_CAP: # some max number before its not worth to spend that much
-            return random.randchoice([0]*(ally[3])+[1]*(castle_dif-2)//2+[-1]*(castle_dif-2)//2) # send away a few soldiers
+            return random.choice([0]*(ally[3])+[1]*((castle_dif-2)//2)+[-1]*((castle_dif-2)//2)) # send away a few soldiers
         
         else:
             return 0
@@ -171,8 +171,6 @@ def lol2electricboogalootest(ally: list, enemy: list, offset: int, SOLDIER_CAP,S
 test = 0
 
 def lol2electricboogalooV2(ally: list, enemy: list, offset: int) -> int:
-    global test
-    test =  random.randint(0,100)
     castle_idx = 3+offset
     castle_dif = ally[castle_idx] - enemy[castle_idx]
     SOLDIER_CAP = 7
@@ -181,10 +179,10 @@ def lol2electricboogalooV2(ally: list, enemy: list, offset: int) -> int:
     if (offset == 0):
         
         if enemy[3] > SOLDIER_CAP: # some max number before its not worth to win
-            return random.randchoice([-1, 1])
+            return random.choice([-1, 1])
 
         elif castle_dif > CASTLE_DIF_CAP: # some max number before its not worth to spend that much
-            return random.randchoice([0]*ally[3]+[1]*(castle_dif-2)//2+[-1]*(castle_dif-2)//2) # send away a few soldiers
+            return random.choice([0]*ally[3]+[1]*((castle_dif-2)//2)+[-1]*((castle_dif-2)//2)) # send away a few soldiers
         
         else:
             return 0
@@ -197,7 +195,7 @@ def lol2electricboogalooV2(ally: list, enemy: list, offset: int) -> int:
             return -1
         
         else:
-            return 1 if random.randint(0,ally[castle_idx+1]+ally[castle_idx-1]) < (-2*castle_dif)+2 else -1
+            return (1 if random.randint(0,ally[castle_idx+1]+ally[castle_idx-1]) < (-2*castle_dif)+2 else -1)
     
     if (offset == -1):
         if enemy[castle_idx] > SOLDIER_CAP:
@@ -207,8 +205,113 @@ def lol2electricboogalooV2(ally: list, enemy: list, offset: int) -> int:
             return 1
         
         else:
-            return -1 if random.randint(0,ally[castle_idx+1]+ally[castle_idx-1]) < -2*castle_dif+2 else 1
+            return (-1 if random.randint(0,ally[castle_idx+1]+ally[castle_idx-1]) < -2*castle_dif+2 else 1)
 
+def lol2electricboogalooV3(ally: list, enemy: list, offset: int) -> int:
+    castle_idx = 3+offset
+    castle_dif = ally[castle_idx] - enemy[castle_idx]
+    SOLDIER_CAP = 7
+    SOLDIER_CAP_CAP= 15
+    SAFE_PADDING = 1
+    CASTLE_DIF_CAP = 6
+    if (offset == 0):
+        
+        if enemy[3] > SOLDIER_CAP: # some max number before its not worth to win
+            left_castle_dif = ally[0]-enemy[0]
+            right_castle_dif = ally[6]-enemy[6]
+            if enemy[0] > SOLDIER_CAP_CAP and enemy[6] > SOLDIER_CAP_CAP:
+                return random.choice([-1, 1])
+            elif enemy[0] > SOLDIER_CAP_CAP:
+                return 1
+            elif enemy[6] > SOLDIER_CAP_CAP:
+                return -1
+            elif left_castle_dif < 0 and right_castle_dif < 0:
+                return random.choice([-1]*(-left_castle_dif+4)+[1]*(-right_castle_dif+4))
+            elif left_castle_dif < 0:
+                return -1
+                return random.choice([-1]*(-left_castle_dif+4)+[1]*max(0,(SAFE_PADDING-right_castle_dif)))
+            elif right_castle_dif < 0:
+                return 1
+                return random.choice([-1]*max(0,(SAFE_PADDING-left_castle_dif))+[1]*(-right_castle_dif+4))
+            else:
+                return random.choice([-1, 1])
+
+
+        elif castle_dif > CASTLE_DIF_CAP: # some max number before its not worth to spend that much
+            return random.choice([0]*ally[3]+[1]*((castle_dif-2)//2)+[-1]*((castle_dif-2)//2)) # send away a few soldiers
+        
+        else:
+            return 0
+    
+    if (offset == 1): 
+        if enemy[castle_idx] > SOLDIER_CAP:
+            return -1
+        
+        elif castle_dif >= SAFE_PADDING:
+            return -1
+        
+        else:
+            return (1 if random.randint(0,ally[castle_idx+1]+ally[castle_idx-1]) < (-castle_dif)+2 else -1)
+    
+    if (offset == -1):
+        if enemy[castle_idx] > SOLDIER_CAP:
+            return 1
+        
+        elif castle_dif >= SAFE_PADDING:
+            return 1
+        
+        else:
+            return (-1 if random.randint(0,ally[castle_idx+1]+ally[castle_idx-1]) < -castle_dif+2 else 1)
+        
+def lol2electricboogalooV4(ally: list, enemy: list, offset: int) -> int:
+    castle_idx = 3+offset
+    castle_dif = ally[castle_idx] - enemy[castle_idx]
+    SOLDIER_CAP = 7
+    SOLDIER_CAP_CAP= 15
+    SAFE_PADDING = 2
+    CASTLE_DIF_CAP = 6
+    if (offset == 0):
+        
+        if enemy[3] > SOLDIER_CAP: # some max number before its not worth to win
+            left_castle_dif = ally[0]-enemy[0]
+            right_castle_dif = ally[6]-enemy[6]
+            if enemy[0] > SOLDIER_CAP_CAP and enemy[6] > SOLDIER_CAP_CAP:
+                return 0
+            elif left_castle_dif < 0 and right_castle_dif < 0:
+                return random.choice([-1]*(-left_castle_dif+4)+[1]*(-right_castle_dif+4))
+            elif left_castle_dif < 0:
+                return random.choice([-1]*(-left_castle_dif+4)+[1]*max(0,(SAFE_PADDING-right_castle_dif)))
+            elif right_castle_dif < 0:
+                return random.choice([-1]*max(0,(SAFE_PADDING-left_castle_dif))+[1]*(-right_castle_dif+4))
+            else:
+                return random.choice([-1, 1])
+
+
+        elif castle_dif > CASTLE_DIF_CAP: # some max number before its not worth to spend that much
+            return random.choice([0]*ally[3]+[1]*((castle_dif-2)//2)+[-1]*((castle_dif-2)//2)) # send away a few soldiers
+        
+        else:
+            return 0
+    
+    if (offset == 1): 
+        if enemy[castle_idx] > SOLDIER_CAP:
+            return -1
+        
+        elif castle_dif >= SAFE_PADDING:
+            return -1
+        
+        else:
+            return (1 if random.randint(0,ally[castle_idx+1]+ally[castle_idx-1]) < (-castle_dif)+2 else -1)
+    
+    if (offset == -1):
+        if enemy[castle_idx] > SOLDIER_CAP:
+            return 1
+        
+        elif castle_dif >= SAFE_PADDING:
+            return 1
+        
+        else:
+            return (-1 if random.randint(0,ally[castle_idx+1]+ally[castle_idx-1]) < -castle_dif+2 else 1)
 
 def set_n_per_castle(ally: list, enemy: list, offset: int) -> int:
     N = 9
@@ -228,14 +331,14 @@ def set_n_per_castle(ally: list, enemy: list, offset: int) -> int:
         if ally[castle_idx] >= N:
             return -1
         elif ally[castle_idx]+ally[castle_idx-1]+ally[castle_idx+1] <= CUT_OFF:
-            return random.randchoice([-1,-1,1])
+            return random.choice([-1,-1,1])
         else:
             return 1 if random.randint(0,ally[castle_idx+1]+ally[castle_idx-1]) < N-ally[castle_idx] else -1
     if (offset == -1):
         if ally[castle_idx] >= N:
             return 1
         elif ally[castle_idx]+ally[castle_idx-1]+ally[castle_idx+1] <= CUT_OFF:
-            return random.randchoice([-1,1,1])
+            return random.choice([-1,1,1])
         else:
             return -1 if random.randint(0,ally[castle_idx+1]+ally[castle_idx-1]) < N-ally[castle_idx] else 1
 
@@ -251,7 +354,7 @@ def get_strategies():
 
     In the official grader, only the first element of the list will be used as your strategy.
     """
-    strategies = [lol2electricboogalooV2,set_n_per_castle]
+    strategies = [lol2electricboogalooV3,lol2electricboogalooV2,lol2electricboogaloo,lol,offset]
     #strategies = []
 
     #strategies.append(lambda ally, enemy, offset: lol2electricboogalootest(ally, enemy, offset, 7, 1, 5))
