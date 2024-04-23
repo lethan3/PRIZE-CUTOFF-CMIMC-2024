@@ -18,6 +18,7 @@ class Planner:
         self.necessary = []
         self.tiles = None
         self.grid = None
+        self.restart = False
         return
     
     def load_png(self, image_path):
@@ -521,6 +522,47 @@ class Planner:
         #self.sentPlan = self.remove_branches(self.sentPlan)
         return self.sentPlan
 
+    def shave_from_random_line(self, q, queryOutputs):
+        if not self.good_line or q == 100 or self.restart:
+            if len(queryOutputs) == 0 or not queryOutputs[-1] or self.restart:
+                self.restart = False
+                self.line_width += 1
+                self.sentPlan = self.random_path(self.pairs[0][0], self.pairs[0][1], self.line_width)
+                return self.sentPlan
+            else:
+                self.good_line = True
+
+        if queryOutputs[-1]:
+            self.bestPlan = copy.deepcopy(self.sentPlan)
+        elif q <= 60:
+            self.necessary+= self.last_rmv
+
+
+        self.last_rmv = []  
+        
+        self.sentPlan = copy.deepcopy(self.bestPlan)
+
+
+        #print(*self.sentPlan, sep='\n')
+
+        points_on_border = self.border_roads(self.sentPlan)
+        #print(points_on_border)
+
+        for i in range((2 if q > 60 else 1)):
+            del_i, del_j = random.choice(points_on_border)
+            
+            while not self.sentPlan[del_i][del_j] and not (del_i, del_j) in self.necessary and not (del_i, del_j) == tuple(self.pairs[0][0]) and not (del_i, del_j) == tuple(self.pairs[0][1]):
+                # print(del_i, del_j)
+                del_i, del_j = random.choice(points_on_border)
+
+            self.sentPlan[del_i][del_j] = False
+            self.last_rmv.append( (del_i, del_j) )
+
+        self.sentPlan = self.remove_islands(self.sentPlan)
+        #self.sentPlan = self.remove_branches(self.sentPlan)
+        return self.sentPlan
+
+
     def task1(self, q, queryOutputs):  # p = 5, bd = 0.25
         return self.shave_from_border_v2(q, queryOutputs)
 
@@ -550,6 +592,15 @@ class Planner:
     def task3(self, q, queryOutputs): # p = 1, bd = 0.25
 
         #return self.shave_from_right_angle_line(q, queryOutputs)
+        if q==66: self.restart = True
+        if q==33: self.restart = True
+
+        if q > 66:
+            return self.shave_from_random_line(q, queryOutputs)
+        elif q > 33:
+            return self.shave_from_weird_line(q, queryOutputs)
+        return self.shave_from_line(q, queryOutputs)
+        
         return self.shave_from_weird_line_v2(q, queryOutputs)
         return self.shave_from_line(q, queryOutputs)
 
@@ -557,12 +608,19 @@ class Planner:
     
 
     def task4(self, q, queryOutputs): # p = 1, bd = 0.1
+
         # check if pairs are in the same row or column
-        if(q > 97): self.random_path(self.pairs[0][0], self.pairs[0][1], 2)
-        dist = (self.pairs[0][0][0] - self.pairs[0][1][0]) ** 2 + (self.pairs[0][0][1] - self.pairs[0][1][1]) ** 2
-        #self.random_path(self.pairs[0][0], self.pairs[0][1], 1)
-        if(dist >= 16): return self.shave_from_right_angle_line_v2(q, queryOutputs)
+        #return self.shave_from_random_line(q, queryOutputs)
+        if q==66: self.restart = True
+        if q==33: self.restart = True
+
+        if q > 66:
+            return self.shave_from_random_line(q, queryOutputs)
+        elif q > 33:
+            return self.shave_from_weird_line(q, queryOutputs)
         return self.shave_from_line(q, queryOutputs)
+        
+        return self.shave_from_weird_line_v2(q, queryOutputs)
 
             
     def task4_same_row(self, q):
