@@ -153,7 +153,7 @@ def eval_move(board_copy, player, pos): # return the value of a move played by p
 
     
 
-def strat_1_move(board_copy, player):
+def strat_1_dup2_move(board_copy, player):
     diameters.clear()
 
     visit = {p:0 for p in node_coordinates}

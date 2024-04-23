@@ -1,6 +1,10 @@
 import argparse
 from strategy import get_strategies
 import random
+import contextlib
+import multiprocessing
+with contextlib.redirect_stdout(None):
+    import pygame
 
 class BlottoSwarmGame:
     NUM_CASTLES = 10
@@ -60,6 +64,9 @@ class BlottoSwarmGame:
                 self.pts[0] += 1
             elif soldiers1 > soldiers0:
                 self.pts[1] += 1
+        
+        # print('P1:', self.board[0])
+        # print('P2:', self.board[1], '\n')
 
     def scores(self) -> list:
         return self.pts
@@ -70,10 +77,28 @@ class BlottoSwarmGrader:
     """
     NUM_DAYS = 100
 
-    def __init__(self, num_games: int = 20, debug = False):
+    def __init__(self, num_games: int = 20, debug = False, visualize = False, multithread = False):
         self.num_games = num_games # number of games to play per pair of strategies
         self.debug = debug
+        self.visualize = visualize
+        self.multithread = multithread
+        self.screen = None
+        if False:
+            pygame.init()
+            self.screen = pygame.display.set_mode((800, 800))
+            self.screen.fill((255, 255, 255))
+            pygame.display.flip()
+            pygame.display.set_caption("Blotto Swarm")
+            self.clock = pygame.time.Clock()
+            self.font = pygame.font.Font(None, 36)
         self.strategies = get_strategies()
+
+    def view_current_state(self, game: BlottoSwarmGame):
+        text = self.font.render(str(game.board), True, (0, 0, 0))
+        self.screen.blit(text, (300, 300))
+        self.clock.tick(60)
+        pygame.display.flip()
+        
 
     def grade(self, strategy1, strategy2):
         scores = [0, 0]
@@ -101,6 +126,62 @@ class BlottoSwarmGrader:
                     for i, move in enumerate(moves[team]):
                         game.move(team, i, move)
                 game.calc_score()
+                if self.visualize:
+                    print("strategy1:", game.board[0])
+                    print("strategy2:", game.board[1])
+                    print(game.scores())
+                    print()
+                    input()
+
+            game_score = game.scores()
+            if game_score[0] > game_score[1]:
+                scores[0] += 1
+            elif game_score[1] > game_score[0]:
+                scores[1] += 1
+            else:
+                scores[0] += 0.5
+                scores[1] += 0.5
+        
+        return scores
+    
+    def execute_strategy(self, strategy, game, team, soldier_id, queue):
+        ally, enemy, offset = game.state(team, soldier_id)
+        move = 0
+        try:
+            move = strategy(ally, enemy, offset)
+            assert move in [-1, 0, 1]
+        except Exception as ex:
+            if self.debug:
+                raise ex
+            else:
+                move = random.randint(-1, 1)
+        # self.moves[team][soldier_id] = move
+        queue.put((team, soldier_id, move))
+        # print(soldier_id, move)
+
+    def grade_seperate(self, strategy1, strategy2):
+        scores = [0, 0]
+        for game_num in range(1, self.num_games+1):
+            self.moves = [[None] * BlottoSwarmGame.NUM_SOLDIERS for _ in range(2)]
+            if self.debug and game_num % 100 == 0:
+                print(f"Progress: {game_num} / {self.num_games} | {scores}")
+
+            game = BlottoSwarmGame()
+            processes = []
+            queue = multiprocessing.Queue()
+            for team, strategy in enumerate([strategy1, strategy2]):
+                for i in range(BlottoSwarmGame.NUM_SOLDIERS):
+                    process = multiprocessing.Process(target=self.execute_strategy, args=(strategy, game, team, i, queue))
+                    process.start()
+                    processes.append(process)
+            print(f"INITIALIZED GAME {game_num}")
+            for _ in range(self.NUM_DAYS):
+                for process in processes:
+                    process.join()
+                while not queue.empty():
+                    team, soldier_id, move = queue.get()
+                    game.move(team, soldier_id, move)
+                game.calc_score()
 
             game_score = game.scores()
             if game_score[0] > game_score[1]:
@@ -117,13 +198,14 @@ class BlottoSwarmGrader:
         """
         Grades all strategies against each other and prints the winrate of each strategy.
         """
+
         wins = [0] * len(self.strategies)
         for i in range(len(self.strategies)):
             for j in range(i+1, len(self.strategies)):
                 if self.debug:
                     print(f"Grading strategies {i} and {j}:")
 
-                scores = self.grade(self.strategies[i], self.strategies[j])
+                scores = self.grade(self.strategies[i], self.strategies[j]) if not self.multithread else self.grade_seperate(self.strategies[i], self.strategies[j])
                 wins[i] += scores[0]
                 wins[j] += scores[1]
         
@@ -147,9 +229,11 @@ if __name__ == "__main__":
 
     parser.add_argument("--games", "-g", type=int, default=20)
     parser.add_argument("--debug", "-d", action="store_true")
+    parser.add_argument("--visualize", "-v", action="store_true")
+    parser.add_argument("--multithread", "-m", action="store_true")
 
     args = parser.parse_args()
 
-    grader = BlottoSwarmGrader(num_games=args.games, debug=args.debug)
+    grader = BlottoSwarmGrader(num_games=args.games, debug=args.debug, visualize=args.visualize, multithread=args.multithread)
     grader.grade_all()
     grader.print_result()

@@ -20,7 +20,7 @@ HEX_SIZE = 40  # Size of each hexagon
 WIDTH, HEIGHT = 800, 600  # Window dimensions
 BACKGROUND_COLOR = (0, 255, 255)  # Aqua
 FPS = 30
-players = ["white", "black", "red"]  # List of players
+colors = [(255, 255, 255),(0, 0, 0),(255, 0, 0)]  # List of players
 
 res = {}
 step = 0
@@ -141,7 +141,7 @@ while running:
     font = pygame.font.Font(None, 36)
     scores = res["game"][step][2]
     for idx, player in enumerate(players):
-        text = font.render(f"{player.capitalize()}: {scores[idx]}", True, (0, 0, 0))
+        text = font.render(f"{player.capitalize()}: {scores[idx]}", True, colors[idx])
         screen.blit(text, (WIDTH - 300, 20 + idx * 40))
 
     # Coordinate?
