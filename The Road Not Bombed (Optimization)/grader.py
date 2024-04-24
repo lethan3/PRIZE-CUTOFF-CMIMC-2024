@@ -245,7 +245,6 @@ if __name__ == "__main__":
 
     if args.seed:
         rng_grader.seed(args.seed)
-    
     if args.optimal:
         p, bd = 1, 0.25
         GEO_SCORE = 0
@@ -317,7 +316,7 @@ if __name__ == "__main__":
         bd = 0.1
     elif args.task == 5:
         p = 1
-        bd = 0  
+        bd = 0
     else:
         p = 1
         bd = 0.1
