@@ -342,7 +342,7 @@ if __name__ == "__main__":
             if not NOTHING: print(f"Game {i+1}         Task: {task}")
             pairs, bombs = generateSetup(n, p, bd)
             runGrader(soln, pairs, bombs)
-            TOT_LENGTH += shortest_path_length(pairs, bombs)
+            if(p==1): TOT_LENGTH += shortest_path_length(pairs, bombs)
         print(f"Total Games: {args.games}         Task: {task}")
         print('\x1b[0;31;40m'+f"Average Score: {AVG_SCORE/args.games}"+'\x1b[0m')
         print('\x1b[0;31;40m'+f"Geometric Mean Score: {round(2**(GEO_SCORE/args.games),2)}"+'\x1b[0m')
