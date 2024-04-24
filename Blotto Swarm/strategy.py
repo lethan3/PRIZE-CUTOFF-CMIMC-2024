@@ -210,7 +210,7 @@ def lol2electricboogalooV2(ally: list, enemy: list, offset: int) -> int:
 def lol2electricboogalooV3(ally: list, enemy: list, offset: int) -> int:
     castle_idx = 3+offset
     castle_dif = ally[castle_idx] - enemy[castle_idx]
-    SOLDIER_CAP = 7
+    SOLDIER_CAP = 10
     SOLDIER_CAP_CAP= 15
     SAFE_PADDING = 1
     CASTLE_DIF_CAP = 6
