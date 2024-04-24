@@ -151,13 +151,31 @@ def see_move(board_copy, player, pos): # see if move ruins, builds 4, builds 3, 
 
     return 0.5
 
+def on_border(pos):
+    return min(pos) == -GRID_RADIUS + 1 or max(pos) == GRID_RADIUS
+
+def on_inborder(pos):
+    if (min(pos) == -GRID_RADIUS + 1) and (max(pos) == GRID_RADIUS):
+        return False
+    if (min(pos) == -GRID_RADIUS + 1):
+        return sum(pos) % 2
+    if (max(pos) == GRID_RADIUS):
+        return not (sum(pos) % 2)
+    return False
+
+def on_outborder(pos):
+    return on_border(pos) and not on_inborder(pos)
+
 def openness_value(board_copy, player, pos): # return how open a cell is for expansion
     q = deque()
-    q.append((pos, 0))
+    q.append((pos, 0, True))
 
     visited = set(pos)
 
     open_val = 0
+
+    have_border = False
+    
     dists = [0, 0, 0, 0]
 
     board_new = board_copy.copy()
@@ -165,30 +183,66 @@ def openness_value(board_copy, player, pos): # return how open a cell is for exp
 
     visit = {p:0 for p in node_coordinates}
 
+    whitelist = set()
     while not len(q) == 0:
-        node, d = q[0]
+        node, d, in_cc = q[0]
         q.popleft()
         if (d != 0): 
             player_border = False
             for ne in NEIGHBOR_LIST[node]:
-                if ne in board_copy and board_copy[ne] == player:
+                if ne in board_copy and board_copy[ne] == player and not in_cc and ne not in whitelist:
                     player_border = True
             if not player_border:
                 if d <= 3: dists[d] += 1
                 board_new[node] = player
-
             
         for ne in NEIGHBOR_LIST[node]:
             if ne not in visited and ne not in board_copy:
-                q.append((ne, d + 1))
+                q.append((ne, d + 1, False))
                 visited.add(ne)
+            if in_cc and ne not in visited and ne in board_copy and board_copy[ne] == player:
+                q.append((ne, d + 1, in_cc))
+                visited.add(ne)
+                whitelist.add(ne)
+                if (on_border(ne)):
+                    have_border = True
+
+    if on_inborder(pos):
+        open_val += 1
+    if on_outborder(pos):
+        open_val -= 1
+
+    # open_val = (0, 6, 16, 18)[dists[1]] + 3 * dists[2] + dists[3]
+
+    # dist_2_good = False
+
+    for i in range(3):
+        for j in range(3):
+            if (i == j): continue
+            dist_2 = [pos[0], pos[1], pos[2]]
+            dist_2[i] += 1
+            dist_2[j] -= 1
+            dist_2 = tuple(dist_2)
+            
+            if (dist_2 in board_copy and board_copy[dist_2] == player):
+                # dist_2_good = True
+                open_val += 3
+
+    # if (dist_2_good):
+    #     open_val += 3
     
-    open_val = (0, 6, 16, 18)[dists[1]] + 3 * dists[2] + dists[3]
+    diam = get_diameter(board_new, pos, visit)
+    if (diam >= 4): return open_val + 400
+    if (diam == 3): return open_val + 300
+    return 0
 
-    if get_diameter(board_new, pos, visit) < 4:
-        return 0
+    # if diam < 3:
+    #     return 0
 
-    return open_val
+    # if diam == 3:
+    #     return open_val
+
+    # return open_val + 100
 
 def top_move(board_copy, player):
     # if have a complete, take that
@@ -207,7 +261,7 @@ def top_move(board_copy, player):
     for node in node_coordinates:
         if node not in board_copy:
             val = see_move(board_copy, player, node)
-            sab_val = 2 if node in fs[enes[1]] else 1 if node in fs[enes[0]] else 0
+            sab_val = 2 if node in fs[enes[1]] else 0 if node in fs[enes[0]] else 0
             ov = openness_value(board_copy, player, node)
 
             moves.append((val, sab_val, ov, node))
@@ -241,7 +295,7 @@ def strat_2_move(board_copy, player):
     my_move = top_move(board_copy, player)
 
     if ((my_move[2] == 0 or my_move[0] < 1) and my_move[1] == 0):
-        # move won't be able to form diameter 4 or sabotage
+        # move won't be able to form diameter 3 or sabotage
 
         poss_moves = []
 
@@ -252,11 +306,11 @@ def strat_2_move(board_copy, player):
         
         # poss_moves.sort(reverse=True)
         if len(poss_moves):
-            # print('no good move, block', poss_moves[0][3])
+            # print('no good move, block', poss_moves[0])
             return poss_moves[0][3]
         else:
-            # print('no good move, no block', my_move[3])
+            # print('no good move, no block', my_move)
             return my_move[3]
     
-    # print('good move', my_move[3])
+    # print('good move', my_move)
     return my_move[3]
