@@ -563,6 +563,12 @@ class Planner:
         return self.sentPlan
 
 
+    def random_blossom(self, q, queryOutputs):
+        plan = [[0 for i in range(self.n)] for j in range(self.n)]
+        for v in queryOutputs:
+            print(v)
+        return plan
+
     def task1(self, q, queryOutputs):  # p = 5, bd = 0.25
         return self.shave_from_border_v2(q, queryOutputs)
 
@@ -626,7 +632,6 @@ class Planner:
     def task4_same_row(self, q):
         ...
         # return plan
-
     def theoretical_max(self, q, queryOutputs):
         return self.random_path(self.pairs[0][0], self.pairs[0][1], 2)
         # draw right angle between the two points
@@ -636,7 +641,9 @@ class Planner:
     def query(self, q, queryOutputs):
         # feel free to modify this function, this is just a suggestion
         if len(self.pairs) == 5 and self.bd == 0.25:
-            return self.task1(q, queryOutputs)
+            return self.random_blossom(q, queryOutputs)
+        # if len(self.pairs) == 5 and self.bd == 0.25:
+        #     return self.task1(q, queryOutputs)
         
         if len(self.pairs) == 5 and self.bd == 0.1:
             return self.task2(q, queryOutputs)
