@@ -83,7 +83,7 @@ class Greedy2Student(BaseStudent):
             for p in self.ends:
                 if not has_path(self.G, adj_vert, p):
                     continue
-                mn = min(mn, shortest_path_length(self.G, adj_vert, p))
+                mn = min(mn, shortest_path_length(self.G, source=adj_vert, target=p, weight='weight'))
                 glob_mn = min(glob_mn, mn + self.G[current_vertex][adj_vert]['weight'])
                 if glob_mn == mn + self.G[current_vertex][adj_vert]['weight']:
                     fin_vert = adj_vert
@@ -112,7 +112,7 @@ class GreedyStudent(BaseStudent):
             for p in self.ends:
                 if not has_path(self.G, adj_vert, p):
                     continue
-                mn = min(mn, shortest_path_length(self.G, adj_vert, p))
+                mn = min(mn, shortest_path_length(self.G, source=adj_vert, target=p, weight='weight'))
                 glob_mn = min(glob_mn, mn + self.G[current_vertex][adj_vert]['weight'])
                 if glob_mn == mn + self.G[current_vertex][adj_vert]['weight']:
                     fin_vert = adj_vert
@@ -167,7 +167,7 @@ class SmarterGreedyStudent(BaseStudent):
             for p in self.ends:
                 if not has_path(self.G, adj_vert, p):
                     continue
-                mn = min(mn, shortest_path_length(self.G, adj_vert, p))
+                mn = min(mn, shortest_path_length(self.G, source=adj_vert, target=p, weight='weight'))
                 glob_mn = min(glob_mn, mn + self.G[current_vertex][adj_vert]['weight'])
                 if glob_mn == mn + self.G[current_vertex][adj_vert]['weight']:
                     if fin_deg <= len(list(self.G.neighbors(adj_vert))):
@@ -191,8 +191,7 @@ class PatientGreedyStudent(BaseStudent):
     def strategy(self, edge_updates, vertex_count, current_vertex):
         # Take the edge corresponding to the shortest path to any end vertex
         self.process_updates(edge_updates)
-
-        #otherwise pick greedily
+        #pick greedily unless current vertex is 0, in which case just pick probabilistically among the good choices
         glob_mn = INF
         fin_vert = 0
         for adj_vert in list(self.G.neighbors(current_vertex)):
@@ -200,9 +199,9 @@ class PatientGreedyStudent(BaseStudent):
             for p in self.ends:
                 if not has_path(self.G, adj_vert, p):
                     continue
-                mn = min(mn, shortest_path_length(self.G, adj_vert, p))
+                mn = min(mn, shortest_path_length(self.G, source=adj_vert, target=p, weight='weight'))
                 glob_mn = min(glob_mn, mn + self.G[current_vertex][adj_vert]['weight'])
-                if glob_mn == mn + self.G[current_vertex][adj_vert]['weight'] and (current_vertex != 0 or random.randint(0,3) == 0):
+                if glob_mn == mn + self.G[current_vertex][adj_vert]['weight'] or (current_vertex == 0 and random.randint(0, 3) == 0):
                     fin_vert = adj_vert
         return fin_vert
 
@@ -241,7 +240,7 @@ class AvoidantGreedyStudent(BaseStudent):
             for p in self.ends:
                 if not has_path(self.G, adj_vert, p):
                     continue
-                mn = min(mn, shortest_path_length(self.G, adj_vert, p))
+                mn = min(mn, shortest_path_length(self.G, source=adj_vert, target=p, weight='weight'))
                 glob_mn = min(glob_mn, mn + self.G[current_vertex][adj_vert]['weight'])
                 if glob_mn == mn + self.G[current_vertex][adj_vert]['weight']:
                     if fin_deg <= len(list(self.G.neighbors(adj_vert))):
