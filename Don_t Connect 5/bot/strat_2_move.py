@@ -147,7 +147,9 @@ def see_move(board_copy, player, pos): # see if move ruins, builds 4, builds 3, 
     if (new_diameter == 4 and max(neighbor_diameters) < 4): return 4 
     if (new_diameter == 3 and max(neighbor_diameters) < 3): return 3
     if (new_diameter == 2 and max(neighbor_diameters) < 2): return 2
-    return 1
+    if (new_diameter == 1): return 1
+
+    return 0.5
 
 def openness_value(board_copy, player, pos): # return how open a cell is for expansion
     q = deque()
@@ -156,20 +158,39 @@ def openness_value(board_copy, player, pos): # return how open a cell is for exp
     visited = set(pos)
 
     open_val = 0
+    dists = [0, 0, 0, 0]
+
+    board_new = board_copy.copy()
+    board_new[pos] = player
+
+    visit = {p:0 for p in node_coordinates}
+
     while not len(q) == 0:
         node, d = q[0]
         q.popleft()
-        if (d != 0): open_val += 1 / d
+        if (d != 0): 
+            player_border = False
+            for ne in NEIGHBOR_LIST[node]:
+                if ne in board_copy and board_copy[ne] == player:
+                    player_border = True
+            if not player_border:
+                if d <= 3: dists[d] += 1
+                board_new[node] = player
+
+            
         for ne in NEIGHBOR_LIST[node]:
             if ne not in visited and ne not in board_copy:
                 q.append((ne, d + 1))
                 visited.add(ne)
     
+    open_val = (0, 6, 16, 18)[dists[1]] + 3 * dists[2] + dists[3]
+
+    if get_diameter(board_new, pos, visit) < 4:
+        return 0
+
     return open_val
 
-
-
-def strat_2_move(board_copy, player):
+def top_move(board_copy, player):
     # if have a complete, take that
     # if have a sabotage, take that
     # else, take max(see_move, openness_value)
@@ -196,11 +217,46 @@ def strat_2_move(board_copy, player):
 
     for move in moves:
         if (move[0] == 4):
-            return move[3]
+            return move
     
     for move in moves:
         if (move[1] and move[0] != -1):
-            return move[3]
+            return move
 
     # print(moves[0][0], ':', moves[0][3])
-    return moves[0][3]
+    for move in moves:
+        if move[2] != 0 and move[0] != -1:
+            return move
+    
+    return moves[0]
+
+def strat_2_move(board_copy, player):
+    sc = score(board_copy)
+    enes = [0, 1, 2]
+    enes.pop(player)
+    if (sc[enes[0]] > sc[enes[1]]): 
+        enes[0], enes[1] = enes[1], enes[0]
+
+    ene_moves = [top_move(board_copy, enes[0]), top_move(board_copy, enes[1])]
+    my_move = top_move(board_copy, player)
+
+    if ((my_move[2] == 0 or my_move[0] < 1) and my_move[1] == 0):
+        # move won't be able to form diameter 4 or sabotage
+
+        poss_moves = []
+
+        if ene_moves[1][3] is not None and see_move(board_copy, player, ene_moves[1][3]) != -1:
+            poss_moves.append(ene_moves[1])
+        if ene_moves[0][3] is not None and see_move(board_copy, player, ene_moves[0][3]) != -1:
+            poss_moves.append(ene_moves[0])
+        
+        # poss_moves.sort(reverse=True)
+        if len(poss_moves):
+            # print('no good move, block', poss_moves[0][3])
+            return poss_moves[0][3]
+        else:
+            # print('no good move, no block', my_move[3])
+            return my_move[3]
+    
+    # print('good move', my_move[3])
+    return my_move[3]
