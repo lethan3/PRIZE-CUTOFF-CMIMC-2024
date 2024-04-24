@@ -8,7 +8,8 @@ def generate_random(n: int) -> list:
     file = open("solutions/random.txt", "w")
     for i in range(n):
         for j in range(n):
-            instruction = f"{i},{j} "+random.choice([str(i) for i in range(n)]+["_"])+","+random.choice([str(i) for i in range(n)]+["_"])+","+random.choice(["U","D","L","R","_"])+","+random.choice(["U","D","L","R","_"])
+            if i == 0 and j == 0: instruction = f"{i},{j} "+random.choice([str(i) for i in range(n)]+["_"])+","+random.choice([str(i) for i in range(n)]+["_"])+","+random.choice(["_"])+","+random.choice(["U","D","L","R"])
+            else: instruction = f"{i},{j} "+random.choice([str(i) for i in range(n)]+["_"])+","+random.choice([str(i) for i in range(n)]+["_"])+","+random.choice(["U","D","L","R","_"])+","+random.choice(["U","D","L","R","_"])
             file.write(instruction+"\n")
     file.close()
 
