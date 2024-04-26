@@ -106,8 +106,9 @@ def play(
             vertex_count[v] += 1
 
             for criminal_idx, contribution in edge_belong[(student_pos[i], v)].items():
+                print(criminal_idx, contribution)
                 criminal_scores[criminal_idx] += contribution
-
+            print()
             student_scores[i] += edge_weights[(student_pos[i], v)]
 
             student_pos[i] = v
@@ -125,8 +126,8 @@ if __name__ == "__main__":
     edge_list, begin, ends = generate_graph((15, 8), (1, 10), path="game.png")
     # edge_list, begin, ends = generate_graph((3, 3), (1, 10), path="game.png")
 
-    criminals = [("Random Criminal #1", RandomCriminal), ("Angry Robin-Hood Criminal #1", AngryRobinHoodCriminal)]#("Robin-Hood Criminal #1", RobinHoodCriminal), ("Constraining Criminal #1", ConstrainingCriminal), ("Hot-Headed Criminal #1", HotHeadedCriminal), ("Miffed Criminal #1", MiffedCriminal), ("Crowd Criminal #1", CrowdCriminal), ("Cooldown Criminal #1", CooldownCriminal)]
-    students = [("Random Greedy Student #1", RandomGreedyStudent), ("Random Greedy Student #2", RandomGreedyStudent), ("Random Greedy Student #3", RandomGreedyStudent), ("Random Greedy Student #4", RandomGreedyStudent), ("Smarter Greedy Student #1", SmarterGreedyStudent), ("Patient Greedy Student #1", PatientGreedyStudent), ("Avoidant Greedy Student #1", AvoidantGreedyStudent), ("Patient Greedy Student #2", PatientGreedyStudent)]
+    criminals = [("Evil Criminal #1", AngryConstrainingRobinHoodCriminal), ("Hybrid Criminal #1", HybridBetweenEvilAngryConstrainingRobinHoodCriminalAndAngryConstrainingRobinHoodCriminal)]#("Angry Constraining Robin-Hood Criminal #1", AngryConstrainingRobinHoodCriminal), ("Robin-Hood Criminal #1", RobinHoodCriminal), ("Constraining Criminal #1", ConstrainingCriminal), ("Hot-Headed Criminal #1", HotHeadedCriminal), ("Miffed Criminal #1", MiffedCriminal), ("Crowd Criminal #1", CrowdCriminal), ("Cooldown Criminal #1", CooldownCriminal)]
+    students = [("Random Greedy Student #1", RandomGreedyStudent), ("Random Greedy Student #2", RandomGreedyStudent), ("Random Greedy Student #3", RandomGreedyStudent), ("Random Greedy Student #4", RandomGreedyStudent), ("Smarter Greedy Student #1", SmarterGreedyStudent), ("Patient Greedy Student #1", PatientGreedyStudent), ("Avoidant Greedy Student #1", AvoidantGreedyStudent), ("Greedy Student #1", GreedyStudent)]
 
     criminal_scores, student_scores = play(edge_list, begin, ends, criminals, students)
 

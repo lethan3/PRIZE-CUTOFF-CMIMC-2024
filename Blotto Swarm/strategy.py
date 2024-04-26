@@ -342,6 +342,7 @@ def set_n_per_castle(ally: list, enemy: list, offset: int) -> int:
         else:
             return -1 if random.randint(0,ally[castle_idx+1]+ally[castle_idx-1]) < N-ally[castle_idx] else 1
 
+def move_clockwise(ally: list, enemy: list, offset: int) -> int:
 
     
 

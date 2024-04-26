@@ -562,11 +562,70 @@ class Planner:
         #self.sentPlan = self.remove_branches(self.sentPlan)
         return self.sentPlan
 
+    def rand_bool(self, probability):
+        return 1 if random.random() < probability else 0
 
+    def check_connected(self, target_pair, current_plan):
+        vis = [[0 for i in range(self.n)] for j in range(self.n)]
+        queue = [target_pair[0]]
+        while len(queue):
+            current_pair = queue.pop(0)
+            if vis[current_pair[0]][current_pair[1]]:
+                continue
+            vis[current_pair[0]][current_pair[1]] = 1
+            for x in range(-1,2):
+                for y in range(-1, 2):
+                    if abs(x + y) == 1 and 0 <= current_pair[0] + x < self.n and 0 <= current_pair[1] + y < self.n and current_plan[current_pair[0] + x][current_pair[1] + y] != 0:
+                        next_pair = (current_pair[0] + x, current_pair[1] + y)
+                        if next_pair == target_pair[1]:
+                            return True
+                        queue.append(next_pair)
+        return False
+
+    def count_ones (self, current_plan):
+        counter = 0
+        for i in range(self.n):
+            for j in range(self.n):
+                if current_plan[i][j] != 0:
+                    counter += 1
+        return counter
     def random_blossom(self, q, queryOutputs):
         plan = [[0 for i in range(self.n)] for j in range(self.n)]
-        for v in queryOutputs:
-            print(v)
+        INF = 1e9 + 7
+        PROB_CONST = 8
+        grid_counter = 0
+        while True:
+            grid_counter += 1
+            print(grid_counter)
+            #hopefully generate a valid grid with around 80-90 squares
+            for i in range(self.n):
+                for j in range(self.n):
+                    dist = INF
+                    for v in self.pairs:
+                        dist = min(dist, abs(i - v[0][0]) + abs(j - v[0][1]))
+                        dist = min(dist, abs(i - v[1][0]) + abs(j - v[1][1]))
+                    #lower likelihood of being a 1 if min distance is further...
+                    plan[i][j] = 1 if dist == 0 else self.rand_bool(PROB_CONST/dist)
+            valid_grid = 1
+            #check that the grid is valid at the moment, otherwise generate the grid again
+            for v in self.pairs:
+                if not self.check_connected(v, plan):
+                    print(v)
+                    valid_grid = 0
+            if not valid_grid:
+                continue
+            pair_counter = 2
+            print(self.count_ones(plan))
+            for v in self.pairs:
+                plan[v[0][0]][v[0][1]] = pair_counter
+                plan[v[1][0]][v[1][1]] = pair_counter
+                pair_counter += 1
+            for i in range(self.n):
+                print(" ".join(list([str(v) for v in plan[i]])))
+
+            #assuming the grid is valid, prune out the nodes that are obviously not useful (this is anything with degree <= 1 that is not an endpoint)
+
+            break
         return plan
 
     def task1(self, q, queryOutputs):  # p = 5, bd = 0.25

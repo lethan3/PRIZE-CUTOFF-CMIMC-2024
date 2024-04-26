@@ -140,7 +140,6 @@ class RandomGreedyStudent(BaseStudent):
             if glob_mn > self.G[current_vertex][adj_vert]['weight']:
                 glob_mn = self.G[current_vertex][adj_vert]['weight']
                 fin_vert = adj_vert
-        print("random_greed", glob_mn, fin_vert)
         return fin_vert
 
 class SmarterGreedyStudent(BaseStudent):
