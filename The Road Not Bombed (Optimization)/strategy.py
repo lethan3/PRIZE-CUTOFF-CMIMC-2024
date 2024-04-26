@@ -19,6 +19,8 @@ class Planner:
         self.tiles = None
         self.grid = None
         self.restart = False
+        self.tolerance = 1
+        self.width_tolerance = 0.5
         return
     
     def load_png(self, image_path):
@@ -60,6 +62,7 @@ class Planner:
         self.tiles = tiles
         self.grid = visted
     
+    #*######## LINE FUNCTIONS #########
     def lerp(self, city1, city2, width, tolerance=2, width_tolerance=0.5):
         grid = [[0] * self.n for i in range(self.n)]
         #calculate line with ax + by + c = 0
@@ -86,7 +89,7 @@ class Planner:
                         grid[i][j] = 1
         return grid
     
-    def lerp_manhatt(self, city1, city2, width, tolerance=2, width_tolerance=0.5):
+    def lerp_manhatt(self, city1, city2, width, tolerance=1, width_tolerance=0.5):
         grid = [[0] * self.n for i in range(self.n)]
         
         if(city1[0] < city2[0]):
@@ -122,7 +125,7 @@ class Planner:
                             newgrid[i + k][j + l] = 1
         return newgrid
 
-    def right_angle_path(self, city1, city2, width):
+    def right_angle_path(self, city1, city2, width, tolerance=1, width_tolerance=0.5):
         grid = [[0] * self.n for i in range(self.n)]
         if city1[0] > city2[0]:
             city1, city2 = city2, city1
@@ -144,7 +147,7 @@ class Planner:
 
         return grid
     
-    def random_path(self, city1, city2, width):
+    def random_path(self, city1, city2, width, tolerance=1, width_tolerance=0.5):
         grid = [[0] * self.n for i in range(self.n)]
         if city1[0] > city2[0]:
             city1, city2 = city2, city1
@@ -186,32 +189,10 @@ class Planner:
         return newgrid
 
     def bresenham(self, city1, city2): 
-        if city1[0] > city2[0]:
-            city1, city2 = city2, city1
-        x1, y1 = city1
-        x2, y2 = city2
-        m_new = 2 * (y2 - y1) 
-        slope_error_new = m_new - (x2 - x1) 
-    
-        y = y1 
-        points = []
-        for x in range(x1, x2+1): 
-    
-            points.append((x, y))
-    
-            # Add slope to increment angle formed 
-            slope_error_new = slope_error_new + m_new 
-    
-            # Slope error reached limit, time to 
-            # increment y and update slope error. 
-            if (slope_error_new >= 0): 
-                y = y+1
-                slope_error_new = slope_error_new - 2 * (x2 - x1) 
+        #TODO
+        ...
 
-        grid = [[0] * self.n for i in range(self.n)]
-        for x, y in points:
-            grid[x][y] = 1
-        return grid
+    #*######## BORDER FUNCTIONS #########
     
     def rand_dist_from_border(self, dist):
         dist = random.randint(1, dist)
@@ -243,8 +224,6 @@ class Planner:
         return roads
 
     
-
-
     def generate_border(self, width):
         plan = [[0] * self.n for i in range(self.n)]
         for i in range(self.n):
@@ -253,6 +232,8 @@ class Planner:
                     plan[i][j] = 1
         return plan
     
+
+    #*######## TRIMMING FUNCTIONS #########
     def remove_islands(self, sentPlan):
         plan = [[0] * self.n for i in range(self.n)]
         #flood fill from city1
@@ -299,6 +280,8 @@ class Planner:
                     if count == 1:
                         tips.append((x, y))
         return sentPlan
+    
+    #*######## UTIL FUNCTIONS #########
 
     def combine(self, plan1, plan2):
         plan = [[0] * self.n for i in range(self.n)]
@@ -306,33 +289,38 @@ class Planner:
             for j in range(self.n):
                 plan[i][j] = plan1[i][j] or plan2[i][j]
         return plan
-
-    def shave_from_border(self, q, queryOutputs):
-        if not self.good_border:
-            if len(queryOutputs) == 0 or not queryOutputs[-1]:
-                self.border_width += 1
-                self.sentPlan = self.generate_border(self.border_width)
-                return self.sentPlan
-            else:
-                self.good_border = True
-
-        if queryOutputs[-1]:
-            self.bestPlan = copy.deepcopy(self.sentPlan)
-        else:
-            self.necessary.append(self.last_rmv)
-        
-        self.sentPlan = copy.deepcopy(self.bestPlan)
-
-        del_i, del_j = self.rand_dist_from_border(self.border_width)
-
-        while not self.sentPlan[del_i][del_j] and not (del_i, del_j) in self.necessary:
-            # print(del_i, del_j)
-            del_i, del_j = self.rand_dist_from_border(self.border_width)
-
-        self.sentPlan[del_i][del_j] = False
-        self.last_rmv = (del_i, del_j)
-        return self.sentPlan
     
+    def rand_bool(self, probability):
+        return 1 if random.random() < probability else 0
+
+    def check_connected(self, target_pair, current_plan):
+        vis = [[0 for i in range(self.n)] for j in range(self.n)]
+        queue = [target_pair[0]]
+        while len(queue):
+            current_pair = queue.pop(0)
+            if vis[current_pair[0]][current_pair[1]]:
+                continue
+            vis[current_pair[0]][current_pair[1]] = 1
+            for x in range(-1,2):
+                for y in range(-1, 2):
+                    if abs(x + y) == 1 and 0 <= current_pair[0] + x < self.n and 0 <= current_pair[1] + y < self.n and current_plan[current_pair[0] + x][current_pair[1] + y] != 0:
+                        next_pair = (current_pair[0] + x, current_pair[1] + y)
+                        if next_pair == target_pair[1]:
+                            return True
+                        queue.append(next_pair)
+        return False
+
+    def count_ones (self, current_plan):
+        counter = 0
+        for i in range(self.n):
+            for j in range(self.n):
+                if current_plan[i][j] != 0:
+                    counter += 1
+        return counter
+    
+
+    #*######## STRATEGY FUNCTIONS #########
+
     def shave_from_border_v2(self, q, queryOutputs):
         if not self.good_border:
             if len(queryOutputs) == 0 or not queryOutputs[-1]:
@@ -361,173 +349,13 @@ class Planner:
         self.sentPlan = self.remove_islands(self.sentPlan)
         self.sentPlan = self.remove_branches(self.sentPlan)
         return self.sentPlan
-    
-    def shave_from_line(self, q, queryOutputs):
-        if not self.good_line or q == 100:
-            if len(queryOutputs) == 0 or not queryOutputs[-1]:
-                self.line_width += 1
-                self.sentPlan = self.lerp(self.pairs[0][0], self.pairs[0][1], self.line_width, 1)
-                return self.sentPlan
-            else:
-                self.good_line = True
 
-        if queryOutputs[-1]:
-            self.bestPlan = copy.deepcopy(self.sentPlan)
-        else:
-            self.necessary.append(self.last_rmv)
-        
-        self.sentPlan = copy.deepcopy(self.bestPlan)
-
-        points_on_border = self.border_roads(self.sentPlan)
-
-        del_i, del_j = random.choice(points_on_border)
-        
-        while not self.sentPlan[del_i][del_j] and not (del_i, del_j) in self.necessary and not (del_i, del_j) == tuple(self.pairs[0][0]) and not (del_i, del_j) == tuple(self.pairs[0][1]):
-            # print(del_i, del_j)
-            del_i, del_j = random.choice(points_on_border)
-
-        self.sentPlan[del_i][del_j] = False
-        self.last_rmv = (del_i, del_j)
-
-        self.sentPlan = self.remove_islands(self.sentPlan)
-        #self.sentPlan = self.remove_branches(self.sentPlan)
-        return self.sentPlan
-    
-    def shave_from_weird_line(self, q, queryOutputs):
-        if not self.good_line or q == 100:
-            if len(queryOutputs) == 0 or not queryOutputs[-1]:
-                self.line_width += 1
-                self.sentPlan = self.lerp_manhatt(self.pairs[0][0], self.pairs[0][1], self.line_width, 1)
-                return self.sentPlan
-            else:
-                self.good_line = True
-
-        if queryOutputs[-1]:
-            self.bestPlan = copy.deepcopy(self.sentPlan)
-        else:
-            self.necessary.append(self.last_rmv)
-        
-        self.sentPlan = copy.deepcopy(self.bestPlan)
-
-        points_on_border = self.border_roads(self.sentPlan)
-
-        del_i, del_j = random.choice(points_on_border)
-        
-        while not self.sentPlan[del_i][del_j] and not (del_i, del_j) in self.necessary and not (del_i, del_j) == tuple(self.pairs[0][0]) and not (del_i, del_j) == tuple(self.pairs[0][1]):
-            # print(del_i, del_j)
-            del_i, del_j = random.choice(points_on_border)
-
-        self.sentPlan[del_i][del_j] = False
-        self.last_rmv = (del_i, del_j)
-
-        self.sentPlan = self.remove_islands(self.sentPlan)
-        #self.sentPlan = self.remove_branches(self.sentPlan)
-        return self.sentPlan
-
-    def shave_from_weird_line_v2(self, q, queryOutputs):
-        if not self.good_line or q == 100:
-            if len(queryOutputs) == 0 or not queryOutputs[-1]:
-                self.line_width += 1
-                self.sentPlan = self.lerp_manhatt(self.pairs[0][0], self.pairs[0][1], self.line_width, 1)
-                return self.sentPlan
-            else:
-                self.good_line = True
-
-        if queryOutputs[-1]:
-            self.bestPlan = copy.deepcopy(self.sentPlan)
-        elif q <= 25:
-            self.necessary+= self.last_rmv
-
-        self.last_rmv = []    
-        
-        self.sentPlan = copy.deepcopy(self.bestPlan)
-
-        points_on_border = self.border_roads(self.sentPlan)
-        for i in range((4 if q > 50 else (2 if q > 25 else 1))):
-            del_i, del_j = random.choice(points_on_border)
-            
-            while not self.sentPlan[del_i][del_j] and not (del_i, del_j) in self.necessary and not (del_i, del_j) == tuple(self.pairs[0][0]) and not (del_i, del_j) == tuple(self.pairs[0][1]):
-                # print(del_i, del_j)
-                del_i, del_j = random.choice(points_on_border)
-
-            self.sentPlan[del_i][del_j] = False
-            self.last_rmv.append( (del_i, del_j) )
-
-        self.sentPlan = self.remove_islands(self.sentPlan)
-        #self.sentPlan = self.remove_branches(self.sentPlan)
-        return self.sentPlan
-    
-    def shave_from_right_angle_line(self, q, queryOutputs):
-        if not self.good_line or q == 100:
-            if len(queryOutputs) == 0 or not queryOutputs[-1]:
-                self.line_width += 1
-                self.sentPlan = self.right_angle_path(self.pairs[0][0], self.pairs[0][1], self.line_width)
-                return self.sentPlan
-            else:
-                self.good_line = True
-
-        if queryOutputs[-1]:
-            self.bestPlan = copy.deepcopy(self.sentPlan)
-        else:
-            self.necessary.append(self.last_rmv)
-        
-        self.sentPlan = copy.deepcopy(self.bestPlan)
-
-        points_on_border = self.border_roads(self.sentPlan)
-
-        del_i, del_j = random.choice(points_on_border)
-        
-        while not self.sentPlan[del_i][del_j] and not (del_i, del_j) in self.necessary and not (del_i, del_j) == tuple(self.pairs[0][0]) and not (del_i, del_j) == tuple(self.pairs[0][1]):
-            # print(del_i, del_j)
-            del_i, del_j = random.choice(points_on_border)
-
-        self.sentPlan[del_i][del_j] = False
-        self.last_rmv = (del_i, del_j)
-
-        self.sentPlan = self.remove_islands(self.sentPlan)
-        #self.sentPlan = self.remove_branches(self.sentPlan)
-        return self.sentPlan
-    
-    def shave_from_right_angle_line_v2(self, q, queryOutputs):
-        if not self.good_line or q == 100:
-            if len(queryOutputs) == 0 or not queryOutputs[-1]:
-                self.line_width += 1
-                self.sentPlan = self.right_angle_path(self.pairs[0][0], self.pairs[0][1], self.line_width)
-                return self.sentPlan
-            else:
-                self.good_line = True
-
-        if queryOutputs[-1]:
-            self.bestPlan = copy.deepcopy(self.sentPlan)
-        elif q <= 60:
-            self.necessary+= self.last_rmv
-
-        self.last_rmv = []  
-        
-        self.sentPlan = copy.deepcopy(self.bestPlan)
-
-        points_on_border = self.border_roads(self.sentPlan)
-
-        for i in range((2 if q > 60 else 1)):
-            del_i, del_j = random.choice(points_on_border)
-            
-            while not self.sentPlan[del_i][del_j] and not (del_i, del_j) in self.necessary and not (del_i, del_j) == tuple(self.pairs[0][0]) and not (del_i, del_j) == tuple(self.pairs[0][1]):
-                # print(del_i, del_j)
-                del_i, del_j = random.choice(points_on_border)
-
-            self.sentPlan[del_i][del_j] = False
-            self.last_rmv.append( (del_i, del_j) )
-
-        self.sentPlan = self.remove_islands(self.sentPlan)
-        #self.sentPlan = self.remove_branches(self.sentPlan)
-        return self.sentPlan
-
-    def shave_from_random_line(self, q, queryOutputs):
+    def shave_from_line(self, q, queryOutputs, line_func):
         if not self.good_line or q == 100 or self.restart:
             if len(queryOutputs) == 0 or not queryOutputs[-1] or self.restart:
                 self.restart = False
                 self.line_width += 1
-                self.sentPlan = self.random_path(self.pairs[0][0], self.pairs[0][1], self.line_width)
+                self.sentPlan = line_func(self.pairs[0][0], self.pairs[0][1], self.line_width, self.tolerance, self.width_tolerance)
                 return self.sentPlan
             else:
                 self.good_line = True
@@ -561,34 +389,7 @@ class Planner:
         self.sentPlan = self.remove_islands(self.sentPlan)
         #self.sentPlan = self.remove_branches(self.sentPlan)
         return self.sentPlan
-
-    def rand_bool(self, probability):
-        return 1 if random.random() < probability else 0
-
-    def check_connected(self, target_pair, current_plan):
-        vis = [[0 for i in range(self.n)] for j in range(self.n)]
-        queue = [target_pair[0]]
-        while len(queue):
-            current_pair = queue.pop(0)
-            if vis[current_pair[0]][current_pair[1]]:
-                continue
-            vis[current_pair[0]][current_pair[1]] = 1
-            for x in range(-1,2):
-                for y in range(-1, 2):
-                    if abs(x + y) == 1 and 0 <= current_pair[0] + x < self.n and 0 <= current_pair[1] + y < self.n and current_plan[current_pair[0] + x][current_pair[1] + y] != 0:
-                        next_pair = (current_pair[0] + x, current_pair[1] + y)
-                        if next_pair == target_pair[1]:
-                            return True
-                        queue.append(next_pair)
-        return False
-
-    def count_ones (self, current_plan):
-        counter = 0
-        for i in range(self.n):
-            for j in range(self.n):
-                if current_plan[i][j] != 0:
-                    counter += 1
-        return counter
+    
     def random_blossom(self, q, queryOutputs):
         plan = [[0 for i in range(self.n)] for j in range(self.n)]
         INF = 1e9 + 7
@@ -596,7 +397,7 @@ class Planner:
         grid_counter = 0
         while True:
             grid_counter += 1
-            print(grid_counter)
+            #print(grid_counter)
             #hopefully generate a valid grid with around 80-90 squares
             for i in range(self.n):
                 for j in range(self.n):
@@ -610,82 +411,40 @@ class Planner:
             #check that the grid is valid at the moment, otherwise generate the grid again
             for v in self.pairs:
                 if not self.check_connected(v, plan):
-                    print(v)
+                    #print(v)
                     valid_grid = 0
             if not valid_grid:
                 continue
             pair_counter = 2
-            print(self.count_ones(plan))
+            #print(self.count_ones(plan))
             for v in self.pairs:
                 plan[v[0][0]][v[0][1]] = pair_counter
                 plan[v[1][0]][v[1][1]] = pair_counter
                 pair_counter += 1
-            for i in range(self.n):
-                print(" ".join(list([str(v) for v in plan[i]])))
+            #for i in range(self.n):
+                #print(" ".join(list([str(v) for v in plan[i]])))
 
             #assuming the grid is valid, prune out the nodes that are obviously not useful (this is anything with degree <= 1 that is not an endpoint)
 
             break
         return plan
+    
+
+    #*########## main task functions here #########
+
 
     def task1(self, q, queryOutputs):  # p = 5, bd = 0.25
         return self.shave_from_border_v2(q, queryOutputs)
-
-        # # print(queryOutputs)
-        # l = len(queryOutputs)
-        # if l > 0 and queryOutputs[l - 1]:
-        #     self.bestPlan = self.sentPlan
-        # n = self.n
-        # newPlan = [[1] * n for i in range(n)]
-
-        # # take the most recent successful plan
-        # # remove each road with small probability
-        # for i in range(n):
-        #     for j in range(n):
-        #         newPlan[i][j] = self.bestPlan[i][j]
-        #         if newPlan[i][j] == 1:
-        #             rando = random.uniform(0, 1)
-        #             if rando < self.yeetProbability:
-        #                 newPlan[i][j] = 0
-
-        # self.sentPlan = newPlan
-        # return self.sentPlan
 
     def task2(self, q, queryOutputs): # p = 5, bd = 0.1
         return self.task1(q, queryOutputs)
 
     def task3(self, q, queryOutputs): # p = 1, bd = 0.25
+        return self.shave_from_line(q, queryOutputs, self.random_path)
 
-        #return self.shave_from_right_angle_line(q, queryOutputs)
-        if q==66: self.restart = True
-        if q==33: self.restart = True
-
-        if q > 66:
-            return self.shave_from_random_line(q, queryOutputs)
-        elif q > 33:
-            return self.shave_from_weird_line(q, queryOutputs)
-        return self.shave_from_line(q, queryOutputs)
-        
-        return self.shave_from_weird_line_v2(q, queryOutputs)
-        return self.shave_from_line(q, queryOutputs)
-
-
-    
 
     def task4(self, q, queryOutputs): # p = 1, bd = 0.1
-
-        # check if pairs are in the same row or column
-        #return self.shave_from_random_line(q, queryOutputs)
-        if q==66: self.restart = True
-        if q==33: self.restart = True
-
-        if q > 66:
-            return self.shave_from_random_line(q, queryOutputs)
-        elif q > 33:
-            return self.shave_from_weird_line(q, queryOutputs)
-        return self.shave_from_line(q, queryOutputs)
-        
-        return self.shave_from_weird_line_v2(q, queryOutputs)
+        return self.shave_from_line(q, queryOutputs, self.random_path)
 
             
     def task4_same_row(self, q):
@@ -700,7 +459,7 @@ class Planner:
     def query(self, q, queryOutputs):
         # feel free to modify this function, this is just a suggestion
         if len(self.pairs) == 5 and self.bd == 0.25:
-            return self.random_blossom(q, queryOutputs)
+            return self.task1(q, queryOutputs)
         # if len(self.pairs) == 5 and self.bd == 0.25:
         #     return self.task1(q, queryOutputs)
         
