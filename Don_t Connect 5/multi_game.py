@@ -10,7 +10,7 @@ os.chdir(dirname(abspath(__file__)))
 # Setting
 
 WRITE = True
-NGAME = 1000
+NGAME = 300
 DEBUG = True
 
 # file path
@@ -38,8 +38,13 @@ print("Bots:", list(bot_list.keys()))
 
 wins = [0, 0, 0]
 
+player_list, funcs = list(bot_list.keys()), list(bot_list.values())
+
 for n in range(NGAME):
-    res = run_game(bot_list)
+    if (n // (NGAME // 10) != (n - 1) // (NGAME // 10)):
+        print(str(n // (NGAME // 10) * 10) + '% done')
+
+    res = run_game(player_list, funcs)
     
     cnt = 0
     for i in range(3):
@@ -47,7 +52,13 @@ for n in range(NGAME):
             cnt += 1
     for i in range(3):
         if (res["scores"][i] == max(res["scores"])):
-            wins[i] += 1 / cnt
+            wins[(i + n) % 3] += 1 / cnt
+
+    player_list.append(player_list[0])
+    player_list.pop(0)
+
+    funcs.append(funcs[0])
+    funcs.pop(0)
 
 
 print(wins)
