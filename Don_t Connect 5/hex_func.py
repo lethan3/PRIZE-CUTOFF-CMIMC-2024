@@ -123,11 +123,12 @@ NEIGHBOR_LIST = dict(
     )
 )
 
-
 def run_game(bot_list):
     player_list = list(bot_list.keys())
     funcs = list(bot_list.values())
+    run_game(player_list, funcs)
 
+def run_game(player_list, funcs):
     # Initialize the game state
     free_coordinates = node_coordinates.copy()
     board = {}  # Dictionary to track the state of the board
