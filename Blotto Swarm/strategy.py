@@ -343,9 +343,44 @@ def set_n_per_castle(ally: list, enemy: list, offset: int) -> int:
             return -1 if random.randint(0,ally[castle_idx+1]+ally[castle_idx-1]) < N-ally[castle_idx] else 1
 
 def move_clockwise(ally: list, enemy: list, offset: int) -> int:
+    #move clockwise until you have at least 8, then try to stay; if not on a castle pause with probability relative to the number of peolpe on your cell
+    SECURED_MAX = 11 #leave cell with probability relative to the number of squares > 11
+    SECURED_CONST = 8
+    MOVE_CONST = 4
+    castle_idx = 3 + offset
+    if offset == 0:
+        #on castle
+        if ally[castle_idx] < enemy[castle_idx] and ally[castle_idx] >= SECURED_MAX:
+            #we will not lose a castle with 11+ people on it
+            return 1
+        else:
+            left_side = ally[castle_idx - 1] + ally[castle_idx-2]
+            if enemy[castle_idx] > ally[castle_idx] and left_side == 0 and (ally[castle_idx - 3] == 0 or enemy[castle_idx - 3] < ally[castle_idx - 3]): #they arent coming to help :pensive:
+                return 1
+            elif enemy[castle_idx] > ally[castle_idx] and enemy[castle_idx + 3] > ally[castle_idx + 3] and enemy[castle_idx - 3] > ally[castle_idx - 3]: #we havent captured enough castles, so good idea to wait
+                return 0
+            elif enemy[castle_idx] - ally[castle_idx] > MOVE_CONST or (ally[castle_idx] <= enemy[castle_idx] and ally[castle_idx + 3] <= enemy[castle_idx + 3] and ally[castle_idx + 3] > 0): #help a neighbor
+                return 1
+            elif ally[castle_idx] > enemy[castle_idx] and ally[castle_idx] > SECURED_MAX:
+                if random.randint(1, max(2, 2 * (SECURED_MAX + 1) - ally[castle_idx])) == 1:
+                    return 1
+                else:
+                    return 0
+            else:
+                return 0
+    if ally[3] > SECURED_CONST:
+        return 1
+    if ally[castle_idx] < SECURED_CONST:
+        #stop to collect others
+        if 0 < ally[2] < ally[3] and offset != 2:
+            return 0
+        elif 0 < ally[1] < ally[3] and offset == 2:
+            return 0
+        else:
+            return 1
 
-    
 
+    return 1
 def get_strategies():
     """
     Returns a list of strategies to play against each other.
@@ -355,8 +390,10 @@ def get_strategies():
 
     In the official grader, only the first element of the list will be used as your strategy.
     """
-    strategies = [lol2electricboogalooV3,lol2electricboogalooV2,lol2electricboogaloo,lol,offset]
-    #strategies = []
+    # strategies = [move_clockwise,lol2electricboogalooV2,lol2electricboogaloo,lol,offset]
+    strategies = [move_clockwise, lol2electricboogalooV2]
+
+    # strategies = [move_clockwise, offset]
 
     #strategies.append(lambda ally, enemy, offset: lol2electricboogalootest(ally, enemy, offset, 7, 1, 5))
     #strategies.append(lambda ally, enemy, offset: lol2electricboogalootest(ally, enemy, offset, 7, 2, 6))

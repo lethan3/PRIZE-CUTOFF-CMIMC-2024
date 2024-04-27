@@ -77,7 +77,7 @@ def play(
                 edge_weights[(u, v)] += w
                 next_edge_updates[(u, v)] += w
 
-            print([(edge_belong[(u,v)][i], (u,v)) for (u,v) in edge_belong.keys() if edge_belong[(u,v)][i] > 0])
+            # print([(edge_belong[(u,v)][i], (u,v)) for (u,v) in edge_belong.keys() if edge_belong[(u,v)][i] > 0])
 
         # Students turn
         for i, (name, student) in enumerate(students):
@@ -108,9 +108,9 @@ def play(
             vertex_count[v] += 1
 
             for criminal_idx, contribution in edge_belong[(student_pos[i], v)].items():
-                print(criminal_idx, contribution)
+                # print(criminal_idx, contribution)
                 criminal_scores[criminal_idx] += contribution
-            print()
+            # print()
             student_scores[i] += edge_weights[(student_pos[i], v)]
 
             student_pos[i] = v
@@ -125,7 +125,7 @@ def play(
 
 # Edit the below
 if __name__ == "__main__":
-    NUM_TESTS = 20
+    NUM_TESTS = 10
     TOTAL_WINS = 0
     for test in range(NUM_TESTS):
         print(test)
@@ -133,7 +133,7 @@ if __name__ == "__main__":
         # edge_list, begin, ends = generate_graph((3, 3), (1, 10), path="game.png")
 
         criminals = [("Hybrid Criminal #1", HybridBetweenEvilAngryConstrainingRobinHoodCriminalAndAngryConstrainingRobinHoodCriminal), ("Evil Criminal #1", RandomCriminal)]#("Angry Constraining Robin-Hood Criminal #1", AngryConstrainingRobinHoodCriminal), ("Robin-Hood Criminal #1", RobinHoodCriminal), ("Constraining Criminal #1", ConstrainingCriminal), ("Hot-Headed Criminal #1", HotHeadedCriminal), ("Miffed Criminal #1", MiffedCriminal), ("Crowd Criminal #1", CrowdCriminal), ("Cooldown Criminal #1", CooldownCriminal)]
-        students = [("Random Greedy Student #1", RandomGreedyStudent), ("Random Greedy Student #2", RandomGreedyStudent), ("Random Greedy Student #3", RandomGreedyStudent), ("Random Greedy Student #4", RandomGreedyStudent), ("Smarter Greedy Student #1", SmarterGreedyStudent), ("Patient Greedy Student #1", PatientGreedyStudent), ("Avoidant Greedy Student #1", AvoidantGreedyStudent), ("Greedy Student #1", GreedyStudent)]
+        students = [("Random Greedy Student #1", RandomGreedyStudent), ("Random Greedy Student #2", RandomGreedyStudent), ("Random Greedy Student #3", RandomGreedyStudent), ("Random Greedy Student #4", RandomGreedyStudent), ("Smarter Greedy Student #1", SmarterGreedyStudent), ("Avoidant Greedy Student #1", AvoidantGreedyStudent), ("Cautious Greedy Student #1", CautiousGreedyStudent), ("Greedy Student #1", GreedyStudent)]
 
         criminal_scores, student_scores = play(edge_list, begin, ends, criminals, students)
 
@@ -148,14 +148,13 @@ if __name__ == "__main__":
         student_scores = {
             k: v for k, v in sorted(student_scores.items(), key=lambda item: item[1])
         }
-
-        print("Criminal Leaderboard")
-        for criminal, score in criminal_scores.items():
-            print(f"{criminal}: {score}")
-        if criminal_scores["Hybrid Criminal #1"] < criminal_scores["Evil Criminal #1"]:
-            TOTAL_WINS += 1
-        print()
+        print("Student Leaderboard")
+        for student, score in student_scores.items():
+            print(f"{student}: {score}")
+        # print("Criminal Leaderboard")
+        # for criminal, score in criminal_scores.items():
+        #     print(f"{criminal}: {score}")
+        # if criminal_scores["Hybrid Criminal #1"] < criminal_scores["Evil Criminal #1"]:
+        #     TOTAL_WINS += 1
+        # print()
     print(TOTAL_WINS, TOTAL_WINS/NUM_TESTS)
-    # print("Student Leaderboard")
-    # for student, score in student_scores.items():
-    #     print(f"{student}: {score}")
