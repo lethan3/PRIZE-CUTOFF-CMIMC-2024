@@ -34,6 +34,7 @@ NOTHING = False
 GEO_SCORE = 0
 TRUEGEO_SCORE = 1
 AVG_SCORE = 0
+ULTRA_VERBOSE = False
 n = 16  # board size is n*n
 q = 100  # number of queries
 
@@ -53,11 +54,13 @@ def runGrader(soln, pairs, bombs):
         queryOutputList.append(output)
 
         qloc -= 1
-
-        if score < bestScore:
+        if ULTRA_VERBOSE:
+            drawState(n, qloc, bombs, pairs, roadplan, score, queryOutputList)
+        elif score < bestScore:
             bestScore = score
             if VERBOSE:  # Draw state whenever a better score is achieved
                 drawState(n, qloc, bombs, pairs, roadplan, score, queryOutputList)
+
     if qloc == 0 and LAST:
         drawState(n, qloc, bombs, pairs, roadplan, score, queryOutputList)
     if not NOTHING: print(f"Best score: {bestScore}")
@@ -235,6 +238,7 @@ if __name__ == "__main__":
     parser.add_argument("--task", "-t", type=int, default=0, help="Task number (1-5) [5, 0.25], [5, 0.1], [1, 0.25], [1, 0.1], [1, 0]")
     parser.add_argument("--games", "-g", type=int, default=1, help="Number of games to run")
     parser.add_argument("--verbose", "-v", action="store_true", help="Print more details")
+    parser.add_argument("--ultra_verbose", "-u", action="store_true", help="Print all details")
     parser.add_argument("--silent", "-s", action="store_true", help="Don't print game states")
     parser.add_argument("--seed", "-sd", type=int, default=None, help="Random seed")
     parser.add_argument("--png", "-p", type=str, default=None, help="png file for strategy")
@@ -294,6 +298,11 @@ if __name__ == "__main__":
 
     if args.verbose:
         VERBOSE = True
+    
+    if args.ultra_verbose:
+        ULTRA_VERBOSE = True
+        VERBOSE = True
+
 
     if args.silent:
         VERBOSE = False

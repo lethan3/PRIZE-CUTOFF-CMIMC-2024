@@ -2,11 +2,12 @@ import random
 from PIL import Image
 import string
 import copy
+import collections
 
 class Planner:
     def setup(self, pairs, bd):
         self.n = 16
-        self.pairs = pairs
+        self.pairs = [[tuple(pair[0]),tuple(pair[1])] for pair in pairs]
         self.bd = bd
         self.yeetProbability = 0.07  # probability of removing a road
         self.bestPlan = [[1] * self.n for i in range(self.n)]
@@ -16,11 +17,16 @@ class Planner:
         self.good_border = False
         self.good_line = False
         self.necessary = []
+        self.safe = []
         self.tiles = None
         self.grid = None
         self.restart = False
         self.tolerance = 1
         self.width_tolerance = 0.5
+        self.left = [1 for i in range(len(self.pairs))]
+        self.right = [1 for i in range(len(self.pairs))]
+        self.mid = [1 for i in range(len(self.pairs))]
+        self.cur = (0,0)
         return
     
     def load_png(self, image_path):
@@ -283,6 +289,13 @@ class Planner:
     
     #*######## UTIL FUNCTIONS #########
 
+    def next(self, point):
+        if point[1] < self.n - 1:
+            return (point[0], point[1] + 1)
+        if point[0] < self.n-1: 
+            return (point[0] + 1, 0)
+        return (0,0)
+
     def combine(self, plan1, plan2):
         plan = [[0] * self.n for i in range(self.n)]
         for i in range(self.n):
@@ -319,6 +332,71 @@ class Planner:
         return counter
     
 
+    def bridge(self, coord):
+        plan1 = [[1] * self.n for i in range(self.n)]
+        plan2 = [[1] * self.n for i in range(self.n)]
+        diag1 = min(coord[0], coord[1]) + min(self.n - coord[0] - 1, self.n - coord[1] - 1)
+        diag2 = min(coord[1], self.n - coord[0] - 1) + min(coord[0], self.n - coord[1] - 1)
+        cur = coord
+        while cur[0] > 0 and cur[1] > 0:
+            cur = (cur[0] - 1, cur[1] - 1)
+            plan1[cur[0]][cur[1]] = 0
+        while cur[0] < self.n - 1 and cur[1] < self.n - 1:
+            cur = (cur[0] + 1, cur[1] + 1)
+            plan1[cur[0]][cur[1]] = 0
+        cur = coord
+        while cur[0] > 0 and cur[1] < self.n - 1:
+            cur = (cur[0] - 1, cur[1] + 1)
+            plan2[cur[0]][cur[1]] = 0
+        while cur[0] < self.n - 1 and cur[1] > 0:
+            cur = (cur[0] + 1, cur[1] - 1)
+            plan2[cur[0]][cur[1]] = 0
+        
+        self.remove_islands(plan1)
+        self.remove_islands(plan2)
+        if plan1[self.n-1][0] == 0 or plan1[0][self.n-1] == 0 or plan2[self.n-1][self.n-1] == 0 or plan2[0][0] == 0:
+            raise Exception("Not safe")
+        
+        plan1[coord[0]][coord[1]] = 1 
+        plan2[coord[0]][coord[1]] = 1
+
+        if plan1[self.n-1][0] == 0 or plan1[0][self.n-1] == 0:
+            return plan2
+        if plan2[self.n-1][self.n-1] == 0 or plan2[0][0] == 0:
+            return plan1
+        return plan1 if diag1 > diag2 else plan2
+        
+
+    def generate_heatmap(self):
+        heatmap = [[0] * self.n for i in range(self.n)]
+        for i in range(self.n):
+            for j in range(self.n):
+                min_dist = 100000
+                for pair in self.pairs:
+                    min_dist = min(min_dist, abs(i - pair[0][0]) + abs(j - pair[0][1]))
+                    min_dist = min(min_dist, abs(i - pair[1][0]) + abs(j - pair[1][1]))
+                heatmap[i][j] = min_dist
+        return heatmap
+    
+    def shortest_path_to_all_points(self, plan):
+        lookup = {}
+        for pairs in self.pairs:
+            for city in pairs:
+                city = tuple(city)
+                lookup[city] = [[-1] * self.n for i in range(self.n)]
+                queue = collections.deque([(city[0],city[1],0)])
+                while queue:
+                    x,y,dist = queue.popleft()
+                    if x < 0 or x >= self.n or y < 0 or y >= self.n or lookup[city][x][y] != -1 or plan[x][y] == 0:
+                        continue
+                    lookup[city][x][y] = dist
+                    for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+                        queue.append((x + dx, y + dy, dist + 1))
+        return lookup
+
+
+    
+
     #*######## STRATEGY FUNCTIONS #########
 
     def shave_from_border_v2(self, q, queryOutputs):
@@ -349,6 +427,118 @@ class Planner:
         self.sentPlan = self.remove_islands(self.sentPlan)
         self.sentPlan = self.remove_branches(self.sentPlan)
         return self.sentPlan
+    
+    def shave_from_border_v3(self, q, queryOutputs):
+        if not self.good_border:
+            if len(queryOutputs) == 0 or not queryOutputs[-1]:
+                self.border_width += 1
+                self.sentPlan = self.generate_heatmap()
+                for i in range(self.n):
+                    for j in range(self.n):
+                        if self.sentPlan[i][j] > self.border_width:
+                            self.sentPlan[i][j] = 0
+                        else:
+                            self.sentPlan[i][j] = 1
+
+                #print(*self.sentPlan, sep='\n')
+                return self.sentPlan
+            else:
+                self.good_border = True
+
+        if queryOutputs[-1]:
+            self.bestPlan = copy.deepcopy(self.sentPlan)
+        else:
+            self.necessary.append(self.last_rmv)
+        
+        self.sentPlan = copy.deepcopy(self.bestPlan)
+
+        max_border = 0
+        for i in range(self.n):
+            for j in range(self.n):
+                if self.sentPlan[i][j] == 1:
+                    max_border = max(max_border, min(i, self.n - i))
+                    max_border = max(max_border, min(j, self.n - j))
+        del_i, del_j = self.rand_dist_from_border(max_border)
+
+        while not self.sentPlan[del_i][del_j] and not (del_i, del_j) in self.necessary:
+            # print(del_i, del_j)
+            del_i, del_j = self.rand_dist_from_border(max_border)
+
+        self.sentPlan[del_i][del_j] = False
+        self.last_rmv = (del_i, del_j)
+        #flood fill from city1
+        self.sentPlan = self.remove_islands(self.sentPlan)
+        self.sentPlan = self.remove_branches(self.sentPlan)
+        return self.sentPlan
+    
+
+    #binary search time
+    def shave_from_border_v4(self, q, queryOutputs):
+        if not self.good_border:
+            if len(queryOutputs) == 0 or not queryOutputs[-1]:
+                self.border_width += 1
+                self.sentPlan = self.generate_border(self.border_width)
+                return self.sentPlan
+            else:
+                self.good_border = True
+
+        if queryOutputs[-1]:
+            self.bestPlan = copy.deepcopy(self.sentPlan)
+        elif q >= 5:
+            self.necessary.append(self.last_rmv)
+        
+        if q == 5:
+            self.sentPlan = copy.deepcopy(self.bestPlan)
+
+            shortest_paths = self.shortest_path_to_all_points(self.sentPlan)
+            
+            for i,pairs in enumerate(self.pairs):
+                self.left[i] = shortest_paths[pairs[0]][pairs[1][0]][pairs[1][1]]
+                self.right[i] = self.left[i] * 2
+                self.mid[i] = self.right[i]
+
+        if q > 5:
+            self.sentPlan = copy.deepcopy(self.bestPlan)
+
+            del_i, del_j = self.rand_dist_from_border(self.border_width)
+
+            while not self.sentPlan[del_i][del_j] and not (del_i, del_j) in self.necessary:
+                # print(del_i, del_j)
+                del_i, del_j = self.rand_dist_from_border(self.border_width)
+
+            self.sentPlan[del_i][del_j] = False
+            self.last_rmv = (del_i, del_j)
+            #flood fill from city1
+            self.sentPlan = self.remove_islands(self.sentPlan)
+            self.sentPlan = self.remove_branches(self.sentPlan)
+            return self.sentPlan
+
+
+        else:
+            self.sentPlan = copy.deepcopy(self.bestPlan)
+
+            shortest_paths = self.shortest_path_to_all_points(self.sentPlan)
+            
+            if queryOutputs[-1]:
+                self.right = self.mid
+            else:
+                self.left = self.mid
+
+            self.mid = [(self.left[i] + self.right[i]) // 2 for i in range(len(self.pairs))]
+
+            newPlan = [[0] * self.n for i in range(self.n)]
+
+            for k,pair in self.pairs:
+                dist_tot = shortest_paths[pair[0]][pair[1][0]][pair[1][1]]
+                for i in range(self.n):
+                    for j in range(self.n):
+                        dist = shortest_paths[pair[0]][i][j] + shortest_paths[pair[1]][i][j]
+                        if dist <= dist_tot * self.mid[k]:
+                            newPlan[i][j]|=self.sentPlan[i][j]
+
+
+
+            return self.sentPlan
 
     def shave_from_line(self, q, queryOutputs, line_func):
         if not self.good_line or q == 100 or self.restart:
@@ -429,12 +619,34 @@ class Planner:
             break
         return plan
     
+    def check_for_safe_cells(self, q, queryOutputs):
+        
+        if self.restart or q == 100 or len(queryOutputs) == 0:
+            print(self.cur)
+            self.sentPlan = self.bridge(self.cur)
+            self.restart = False
+            return self.sentPlan
+        
+        if queryOutputs[-1]:
+            self.safe.append(self.cur)
+        
+        self.cur = self.next(self.cur)
+        self.sentPlan = self.bridge(self.cur)
+        print(self.cur)
+        if q == 1:
+            for x in self.safe:
+                print(x)
+
+        return self.sentPlan
+
+
+    
 
     #*########## main task functions here #########
 
 
     def task1(self, q, queryOutputs):  # p = 5, bd = 0.25
-        return self.shave_from_border_v2(q, queryOutputs)
+        return self.check_for_safe_cells(q, queryOutputs)
 
     def task2(self, q, queryOutputs): # p = 5, bd = 0.1
         return self.task1(q, queryOutputs)
