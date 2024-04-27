@@ -326,6 +326,9 @@ if __name__ == "__main__":
     elif args.task == 5:
         p = 1
         bd = 0
+    elif args.task == 6:
+        p = 5
+        bd = 0
     else:
         p = 1
         bd = 0.1
