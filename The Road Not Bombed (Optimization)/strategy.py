@@ -89,7 +89,7 @@ class Planner:
 
         for i in range(self.n):
             for j in range(self.n):
-                # distance(ax + by + c, (x0,y0)) = |ax0 + by0 + c|/√(a^2 + b^2)
+                # distance(ax + by + c, (x0,y0)) = |ax0 + by0 + c|/sqrt(a^2 + b^2)
                 dist = abs(a * i + b * j + c) / ((a ** 2 + b ** 2) ** 0.5)
                 
                 #make sure point is within bewteen the two cities with some tolerance
@@ -697,25 +697,51 @@ class Planner:
     
 
     #*########## main task functions here #########
+    def shave_from_border(self, q, queryOutputs):
+        if not self.good_border:
+            if len(queryOutputs) == 0 or not queryOutputs[-1]:
+                self.border_width += 1
+                self.sentPlan = self.generate_border(self.border_width)
+                return self.sentPlan
+            else:
+                self.good_border = True
+
+        if queryOutputs[-1]:
+            self.bestPlan = copy.deepcopy(self.sentPlan)
+        else:
+            self.necessary.append(self.last_rmv)
+        
+        self.sentPlan = copy.deepcopy(self.bestPlan)
+
+        del_i, del_j = self.rand_dist_from_border(self.border_width)
+
+        while not self.sentPlan[del_i][del_j] and not (del_i, del_j) in self.necessary:
+            # print(del_i, del_j)
+            del_i, del_j = self.rand_dist_from_border(self.border_width)
+
+        self.sentPlan[del_i][del_j] = False
+        self.last_rmv = (del_i, del_j)
+        return self.sentPlan
 
 
     def task1(self, q, queryOutputs):  # p = 5, bd = 0.25
         self.cur = (0,0)
-        #return self.shave_from_line(q, queryOutputs, self.random_path)
-        return self.shave_from_border_v3(q, queryOutputs)
+        #return self.shave_from_border(q, queryOutputs, self.random_path)
+        #return self.shave_from_border_v3(q, queryOutputs)
+        return self.shave_from_border(q, queryOutputs)
 
     def task2(self, q, queryOutputs): # p = 5, bd = 0.1
-        return self.shave_from_border_v3(q, queryOutputs)
+        #return self.shave_from_border_v3(q, queryOutputs)
         return self.task1(q, queryOutputs)
 
     def task3(self, q, queryOutputs): # p = 1, bd = 0.25
-        return self.shave_from_line(q, queryOutputs, self.random_path)
+        #return self.shave_from_line(q, queryOutputs, self.random_path)
         return self.task1(q, queryOutputs)
 
 
     def task4(self, q, queryOutputs): # p = 1, bd = 0.1
-        if q <= 3: return self.theoretical_max(q, queryOutputs)
-        return self.shave_from_line(q, queryOutputs, self.random_path)
+        #if q <= 3: return self.theoretical_max(q, queryOutputs)
+        #return self.shave_from_line(q, queryOutputs, self.random_path)
         return self.task1(q, queryOutputs)
 
             
