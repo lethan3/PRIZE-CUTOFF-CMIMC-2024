@@ -56,6 +56,7 @@ def runGrader(soln, pairs, bombs):
         qloc -= 1
         if ULTRA_VERBOSE:
             drawState(n, qloc, bombs, pairs, roadplan, score, queryOutputList)
+            bestScore = min(score, bestScore)
         elif score < bestScore:
             bestScore = score
             if VERBOSE:  # Draw state whenever a better score is achieved
