@@ -33,6 +33,7 @@ class Planner:
         self.last_rmv = (-1,-1)
         self.order = [0,1,2,3,4,5]
         self.path_padding = 10
+        self.not_restarted = True
         return
     
     def load_png(self, image_path):
@@ -563,13 +564,13 @@ class Planner:
                 self.sentPlan = [[0]*self.n for i in range(self.n)]
                 for pair in self.pairs:
                     self.sentPlan = self.combine(self.sentPlan, line_func(pair[0], pair[1], self.line_width, self.tolerance, self.width_tolerance))
-                return self.sentPlan
+                return (self.sentPlan,0)
             else:
                 self.good_line = True
 
         if queryOutputs[-1]:
             self.bestPlan = copy.deepcopy(self.sentPlan)
-        elif q <= 60:
+        elif q <= 100:
             self.necessary+= self.last_rmv
 
 
@@ -581,17 +582,25 @@ class Planner:
         #print(*self.sentPlan, sep='\n')
 
         points_on_border = self.border_roads(self.sentPlan)
+        random.shuffle(points_on_border)
+        all_points = [(i,j) for i in range(self.n) for j in range(self.n) if self.sentPlan[i][j] == 1]
+        random.shuffle(all_points)
+        all_points += points_on_border
         #print(points_on_border)
 
-        for i in range((2 if q > 60 else 1)):
-            del_i, del_j = random.choice(points_on_border)
-            del_i, del_j = self.rand_dist_from_border(8)
+        for i in range(2): 
+            #del_i, del_j = random.choice(points_on_border)
+            if len(all_points) == 0:
+                break
+            del_i, del_j = all_points.pop()
             loop_counter = 0
             
             while not self.sentPlan[del_i][del_j] or  (del_i, del_j) in self.necessary or any([(del_i, del_j) == tuple(pair[0]) or (del_i, del_j) == tuple(pair[1]) for pair in self.pairs]) or not self.road_not_needed(self.sentPlan, (del_i, del_j)):
                 # print(del_i, del_j)
-                del_i, del_j = random.choice(points_on_border)
-                del_i, del_j = self.rand_dist_from_border(8)
+                #del_i, del_j = random.choice(points_on_border)
+                if len(all_points) == 0:
+                    break
+                del_i, del_j = all_points.pop()
                 loop_counter+=1
                 if loop_counter > 100:
                     del_i, del_j = -1,-1
@@ -602,9 +611,11 @@ class Planner:
             self.sentPlan[del_i][del_j] = False
             self.last_rmv.append( (del_i, del_j) )
 
+        done = del_i == -1
+
         self.sentPlan = self.remove_islands(self.sentPlan)
         self.sentPlan = self.remove_branches(self.sentPlan)
-        return self.sentPlan
+        return (self.sentPlan,done)
     
     
     def check_for_safe_cells(self, q, queryOutputs):
@@ -712,25 +723,33 @@ class Planner:
                 self.shave_side_idx = 5
                 
 
-        if not queryOutputs[-1] and q <= 80:
+        if not queryOutputs[-1] and q <= 60:
             self.necessary+=self.last_rmv
 
         
+        self.last_rmv = []
         self.sentPlan = copy.deepcopy(self.bestPlan)
 
         #print("HERRREEEE")
 
         points_on_border = self.border_roads(self.sentPlan)
         random.shuffle(points_on_border)
+        all_points = [ (i,j) for i in range(self.n) for j in range(self.n) if self.sentPlan[i][j] == 1]
+        random.shuffle(all_points)
         #print(points_on_border)
 
         
             #print(del_i, del_j)
             
-        for i in range((3 if q > 80 else 1)):
+        for i in range((3 if q > 60 else 1)):
             #del_i, del_j = self.rand_dist_from_border(self.border_width) if q > 30 else points_on_border[-1]
-            if q > 30 or len(points_on_border) == 0:
-                del_i, del_j = self.rand_dist_from_border(self.border_width)
+            if len (all_points) == 0:
+                    del_i, del_j = -1,-1
+                    break
+            elif q > 30 or len(points_on_border) == 0:
+                del_i, del_j = all_points[-1]
+                all_points.pop()
+                #del_i, del_j = self.rand_dist_from_border(self.border_width)
             else:
                 del_i, del_j = points_on_border[-1]
                 points_on_border.pop()
@@ -739,8 +758,13 @@ class Planner:
             while not self.sentPlan[del_i][del_j] or  (del_i, del_j) in self.necessary or any([(del_i, del_j) == tuple(pair[0]) or (del_i, del_j) == tuple(pair[1]) for pair in self.pairs]) or not self.road_not_needed(self.sentPlan, (del_i, del_j)):
                 # print(del_i, del_j)
                 #del_i, del_j = self.rand_dist_from_border(self.border_width) if q > 30 else points_on_border[-1]
-                if q > 30 or len(points_on_border) == 0:
-                    del_i, del_j = self.rand_dist_from_border(self.border_width)
+                if len (all_points) == 0:
+                    del_i, del_j = -1,-1
+                    break
+                elif q > 30 or len(points_on_border) == 0:
+                    del_i, del_j = all_points[-1]
+                    all_points.pop()
+                    #del_i, del_j = self.rand_dist_from_border(self.border_width)
                 else:
                     del_i, del_j = points_on_border[-1]
                     points_on_border.pop()
@@ -836,8 +860,9 @@ class Planner:
 
         if not queryOutputs[-1] and q <= 60:
             self.necessary+=self.last_rmv
+            
 
-        
+        self.last_rmv = []
         self.sentPlan = copy.deepcopy(self.bestPlan)
 
         #print("HERRREEEE")
@@ -869,8 +894,8 @@ class Planner:
             self.border_width = max(1, self.border_width)
 
 
-        self.sentPlan[del_i][del_j] = False
-        self.last_rmv = (del_i, del_j)
+        #self.sentPlan[del_i][del_j] = False
+        #self.last_rmv = (del_i, del_j)
         #flood fill from city1
         self.sentPlan = self.remove_islands(self.sentPlan)
         self.sentPlan = self.remove_branches(self.sentPlan)
@@ -890,65 +915,75 @@ class Planner:
     #*########## main task functions here #########
     
     def task1(self, q, queryOutputs):  # p = 5, bd = 0.25
-        return self.shave_from_border_v3(q, queryOutputs)
-        self.last_rmv = []
-        vals = [[i+1,1000] for i in range(4)]
-        for pair1 in self.pairs:
-            for city1 in pair1:
-                for pair2 in self.pairs:
-                    for city2 in pair2:
-                        if city1 != city2:
-                            if city1[0] == 0 and city2[0] == 0:
-                                vals[0][1] = min(vals[0][1], abs(city1[1] - city2[1]))
-                            if city1[1] == self.n-1 and city2[1] == self.n-1:
-                                vals[1][1] = min(vals[1][1], abs(city1[0] - city2[0]))
-                            if city1[0] == self.n-1 and city2[0] == self.n-1:
-                                vals[2][1] = min(vals[2][1], abs(city1[1] - city2[1]))
-                            if city1[1] == 0 and city2[1] == 0:
-                                vals[3][1] = min(vals[3][1], abs(city1[0] - city2[0]))
-        vals.sort(key=lambda x: x[1], reverse=True)
-        for i in range(4):
-            self.order[i+1] = vals[i][0]
+        #return self.shave_from_border_v3(q, queryOutputs)
+        if q==100: 
+            self.last_rmv = []
+            vals = [[i+1,1000] for i in range(4)]
+            for pair1 in self.pairs:
+                for city1 in pair1:
+                    for pair2 in self.pairs:
+                        for city2 in pair2:
+                            if city1 != city2:
+                                if city1[0] == 0 and city2[0] == 0:
+                                    vals[0][1] = min(vals[0][1], abs(city1[1] - city2[1]))
+                                if city1[1] == self.n-1 and city2[1] == self.n-1:
+                                    vals[1][1] = min(vals[1][1], abs(city1[0] - city2[0]))
+                                if city1[0] == self.n-1 and city2[0] == self.n-1:
+                                    vals[2][1] = min(vals[2][1], abs(city1[1] - city2[1]))
+                                if city1[1] == 0 and city2[1] == 0:
+                                    vals[3][1] = min(vals[3][1], abs(city1[0] - city2[0]))
+            vals.sort(key=lambda x: x[1], reverse=True)
+            for i in range(4):
+                self.order[i+1] = vals[i][0]
         #return self.shave_from_border(q, queryOutputs, self.random_path)
         #if q == 50: self.restart = True
         return self.shave_from_border_v5(q, queryOutputs)
         #return self.shave_from_border_v2(q, queryOutputs)
 
     def task2(self, q, queryOutputs): # p = 5, bd = 0.1
-        return self.shave_from_border_v3(q, queryOutputs)
-        self.last_rmv = []
-        vals = [[i+1,1000] for i in range(4)]
-        for pair1 in self.pairs:
-            for city1 in pair1:
-                for pair2 in self.pairs:
-                    for city2 in pair2:
-                        if city1 != city2:
-                            if city1[0] == 0 and city2[0] == 0:
-                                vals[0][1] = min(vals[0][1], abs(city1[1] - city2[1]))
-                            if city1[1] == self.n-1 and city2[1] == self.n-1:
-                                vals[1][1] = min(vals[1][1], abs(city1[0] - city2[0]))
-                            if city1[0] == self.n-1 and city2[0] == self.n-1:
-                                vals[2][1] = min(vals[2][1], abs(city1[1] - city2[1]))
-                            if city1[1] == 0 and city2[1] == 0:
-                                vals[3][1] = min(vals[3][1], abs(city1[0] - city2[0]))
-        vals.sort(key=lambda x: x[1], reverse=True)
-        for i in range(4):
-            self.order[i+1] = vals[i][0]
+        #return self.shave_from_border_v3(q, queryOutputs)
+        if q==100: 
+            self.last_rmv = []
+            vals = [[i+1,1000] for i in range(4)]
+            for pair1 in self.pairs:
+                for city1 in pair1:
+                    for pair2 in self.pairs:
+                        for city2 in pair2:
+                            if city1 != city2:
+                                if city1[0] == 0 and city2[0] == 0:
+                                    vals[0][1] = min(vals[0][1], abs(city1[1] - city2[1]))
+                                if city1[1] == self.n-1 and city2[1] == self.n-1:
+                                    vals[1][1] = min(vals[1][1], abs(city1[0] - city2[0]))
+                                if city1[0] == self.n-1 and city2[0] == self.n-1:
+                                    vals[2][1] = min(vals[2][1], abs(city1[1] - city2[1]))
+                                if city1[1] == 0 and city2[1] == 0:
+                                    vals[3][1] = min(vals[3][1], abs(city1[0] - city2[0]))
+            vals.sort(key=lambda x: x[1], reverse=True)
+            for i in range(4):
+                self.order[i+1] = vals[i][0]
         #print(self.order)
 
         return self.shave_from_border_v4(q, queryOutputs)
         #return self.task1(q, queryOutputs)
 
     def task3(self, q, queryOutputs): # p = 1, bd = 0.25
-        return self.shave_from_border_v3(q, queryOutputs)
-        return self.shave_from_line(q, queryOutputs, self.random_path)
+        #return self.shave_from_border_v4(q, queryOutputs)
+        x = self.shave_from_line(q, queryOutputs, self.random_path)
+        if x[1]:
+            self.restart = True
+        return x[0]
         #return self.task1(q, queryOutputs)
 
 
     def task4(self, q, queryOutputs): # p = 1, bd = 0.1
-        return self.shave_from_border_v3(q, queryOutputs)
-        if q <= 25: return self.theoretical_max(q, queryOutputs)
-        return self.shave_from_line(q, queryOutputs, self.random_path)
+        #return self.shave_from_border_v3(q, queryOutputs)
+        if q == 60 and self.not_restarted: self.restart = True
+        if q <= 10: return self.theoretical_max(q, queryOutputs)    
+        x = self.shave_from_line(q, queryOutputs, self.random_path)
+        if x[1]:
+            self.restart = True
+            self.not_restarted = False
+        return x[0]
         #return self.task1(q, queryOutputs)
 
             
