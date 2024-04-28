@@ -246,3 +246,75 @@ class AvoidantGreedyStudent(BaseStudent):
                         fin_deg = len(list(self.G.neighbors(adj_vert)))
                         fin_vert = adj_vert
         return fin_vert
+
+class BigGreedyStudent(BaseStudent):
+
+    def __init__(self, edge_list, begin, ends):
+        self.edge_list = edge_list
+        self.begin = begin
+        self.ends = ends
+        self.G = nx.DiGraph()
+        self.G.add_weighted_edges_from(edge_list)
+
+    def process_updates(self, edge_updates):
+        for upd in edge_updates:
+            self.G[upd[0]][upd[1]]['weight'] += edge_updates[upd]
+
+    def strategy(self, edge_updates, vertex_count, current_vertex):
+        # Take the edge corresponding to the shortest path to any end vertex
+        self.process_updates(edge_updates)
+        glob_mn = INF
+        fin_vert = 0
+        for adj_vert in list(self.G.neighbors(current_vertex)):
+            mn = INF
+            mx_w = 0
+            for p in self.ends:
+                if not has_path(self.G, adj_vert, p):
+                    continue
+                mn = min(mn, shortest_path_length(self.G, source=adj_vert, target=p, weight='weight'))
+                glob_mn = min(glob_mn, mn + self.G[current_vertex][adj_vert]['weight'])
+                if glob_mn == mn + self.G[current_vertex][adj_vert]['weight'] and (adj_vert in self.ends or len(list(self.G.neighbors(adj_vert))) > 1):
+                    mx_w = self.G[current_vertex][adj_vert]['weight']
+                    fin_vert = adj_vert
+        return fin_vert
+
+class CautiousGreedyStudent(BaseStudent):
+
+    def __init__(self, edge_list, begin, ends):
+        self.edge_list = edge_list
+        self.begin = begin
+        self.ends = ends
+        self.G = nx.DiGraph()
+        self.G.add_weighted_edges_from(edge_list)
+
+    def process_updates(self, edge_updates):
+        for upd in edge_updates:
+            self.G[upd[0]][upd[1]]['weight'] += edge_updates[upd]
+
+    def strategy(self, edge_updates, vertex_count, current_vertex):
+        # Take the edge corresponding to the shortest path to any end vertex
+        self.process_updates(edge_updates)
+        glob_mn = INF
+        fin_vert = 0
+        for adj_vert in list(self.G.neighbors(current_vertex)):
+            mn = INF
+            for p in self.ends:
+                if not has_path(self.G, adj_vert, p):
+                    continue
+                mn = min(mn, shortest_path_length(self.G, source=adj_vert, target=p, weight='weight'))
+                glob_mn = min(glob_mn, mn + self.G[current_vertex][adj_vert]['weight'])
+                if glob_mn == mn + self.G[current_vertex][adj_vert]['weight'] and (adj_vert in self.ends or len(list(self.G.neighbors(adj_vert))) > 1):
+                    fin_vert = adj_vert
+        if fin_vert == 0:
+            cur_mn = INF
+            for adj_vert in list(self.G.neighbors(current_vertex)):
+                mn = INF
+                for p in self.ends:
+                    if not has_path(self.G, adj_vert, p):
+                        continue
+                    mn = min(mn, shortest_path_length(self.G, source=adj_vert, target=p, weight='weight'))
+                    if mn + self.G[current_vertex][adj_vert]['weight'] > glob_mn:
+                        cur_mn = min(cur_mn, mn + self.G[current_vertex][adj_vert]['weight'])
+                        if cur_mn == mn + self.G[current_vertex][adj_vert]['weight'] and (adj_vert in self.ends or len(list(self.G.neighbors(adj_vert))) > 1):
+                            fin_vert = adj_vert
+        return fin_vert

@@ -333,8 +333,8 @@ class AngryRobinHoodCriminal(BaseCriminal):
     def strategy(self, edge_updates, vertex_count, budget):
         # For each populated vertex, check if there exists a unique
         self.process_updates(edge_updates)
-        if vertex_count[0] == 8:
-            return (0, random.choice(list([x[1] for x in self.edge_list if x[0] == 0])), 0)
+        if vertex_count[0] == self.begin:
+            return (0, random.choice(list([x[1] for x in self.edge_list if x[0] == self.begin])), 0)
         populated_vertices = [(vertex_count[z], z) for z in vertex_count.keys() if vertex_count[z] > 0]
         populated_vertices.sort()
         edge_pos = [] #start node, end node, amount of change, number of students on each node
@@ -359,20 +359,17 @@ class AngryRobinHoodCriminal(BaseCriminal):
             return (vertex, random.choice(list([x[1] for x in self.edge_list if x[0] == vertex])), random.randint(0, min(budget, self.MAX_SPEND)))
 
 class AngryConstrainingRobinHoodCriminal(BaseCriminal):
-    MAX_DEG = 9
-    AHEAD_PROB = 17
+    MAX_SPEND = 75
     def __init__(self, edge_list, begin, ends):
         self.edge_list = edge_list
         self.begin = begin
         self.ends = ends
         self.G = nx.DiGraph()
         self.G.add_weighted_edges_from(edge_list)
-        self.number_ahead = 0
     def process_updates(self, edge_updates):
         for upd in edge_updates:
             self.G[upd[0]][upd[1]]['weight'] += edge_updates[upd]
     def strategy(self, edge_updates, vertex_count, budget):
-        # print("current budget for angry", budget)
         # For each populated vertex, check if there exists a unique
         self.process_updates(edge_updates)
         populated_vertices = [(vertex_count[z], z) for z in vertex_count.keys() if vertex_count[z] > 0]
@@ -384,48 +381,18 @@ class AngryConstrainingRobinHoodCriminal(BaseCriminal):
             vertex_weights = [(self.G[cv][v]['weight'], v) for v in list(self.G.neighbors(cv))]
             vertex_weights.sort()
             if len(vertex_weights) == 1:
-                edge_pos.append((cv, vertex_weights[0][1], budget//2 + (1 if cv_count < 2 else budget//2 + 1), cv_count))
+                edge_pos.append((cv, vertex_weights[0][1], budget//2 + (budget//2 - 1 if cv_count > 1 else -1), cv_count))
             else:
                 edge_pos.append((cv, vertex_weights[0][1], vertex_weights[1][0] - vertex_weights[0][0], cv_count))
         final_possibilities = [((v[2] - 1) * v[3], v[2]-1, v[0], v[1]) for v in edge_pos if v[2] - 1 > 0]
         final_possibilities.sort()
         # print(final_possibilities)
         if len(final_possibilities):
-            # print("final", (final_possibilities[-1][2], final_possibilities[-1][3], min(budget, final_possibilities[-1][1])))
-            fin_choice = final_possibilities[-1][2], final_possibilities[-1][3], min(budget, final_possibilities[-1][1])
-            # print("calculated move", fin_choice)
+            # print("final", final_possibilities[-1])
+            fin_choice = final_possibilities[-1][2], final_possibilities[-1][3], min(budget, final_possibilities[-1][1]) #take the edge that will maximize short run score
             return fin_choice #take the edge that will maximize short run score
         else:
-            # calculate a score based on the expected winnings from each minimum vertex adjacent to a populated vertex
-            # assert len(edge_pos) != 0
-            min_list = [(x[0], min(list([(self.G[x[1]][v[1]]['weight'], v[1]) for v in self.edge_list if v[0] == x[1]]))[1]) for x in populated_vertices]
-            next_pos = []
-            for cv_count, cv in min_list:
-                if cv in self.ends:
-                    continue
-                vertex_weights = [(self.G[cv][v]['weight'], v) for v in list(self.G.neighbors(cv))]
-                vertex_weights.sort()
-                if len(vertex_weights) == 1:
-                    next_pos.append(
-                        (cv, vertex_weights[0][1], budget // 2 + (-1 if cv_count < 2 else budget // 2 - 1), cv_count))
-                else:
-                    next_pos.append((cv, vertex_weights[0][1], vertex_weights[1][0] - vertex_weights[0][0], cv_count))
-            final_possibilities = [((v[2] + 1) * v[3], v[2] + 1, v[0], v[1]) for v in next_pos if v[2] + 1 > 0]
-            final_possibilities.sort()
-            # print("final_possibilities", final_possibilities)
-
-
-            if len(final_possibilities) == 0:
-                return self.begin, list(self.G.neighbors(self.begin))[0], 0 #skip this turn (very unlikely)
-
-            #add as much as is reasonable to the second smallest edge
-
-            # print("neighbors", list(self.G.neighbors(vertex)))
-            fin_choice = final_possibilities[-1][2], final_possibilities[-1][3], min(budget, final_possibilities[-1][1])
-            # print("helper move", fin_choice)
-            self.number_ahead += 1
-            # print(self.number_random)
-            return fin_choice
+            return self.begin, list(self.G.neighbors(self.begin))[0], 0 #skip this turn (very unlikely)
 
 class AngryConstrainingCriminal(BaseCriminal):
     MAX_SPEND = 75
@@ -478,7 +445,7 @@ class EvilAngryConstrainingRobinHoodCriminal(BaseCriminal):
             vertex_weights = [(self.G[cv][v]['weight'], v) for v in list(self.G.neighbors(cv))]
             vertex_weights.sort()
             if len(vertex_weights) == 1:
-                edge_pos.append((cv, vertex_weights[0][1], budget if cv_count > 1 else budget//2, cv_count))
+                edge_pos.append((cv, vertex_weights[0][1], budget, cv_count))
             else:
                 edge_pos.append((cv, vertex_weights[0][1], vertex_weights[1][0] - vertex_weights[0][0], cv_count))
         final_possibilities = [(v[2] * v[3], v[2], v[0], v[1]) for v in edge_pos]
@@ -486,11 +453,15 @@ class EvilAngryConstrainingRobinHoodCriminal(BaseCriminal):
         # print(final_possibilities)
         if len(final_possibilities):
             # print("final", final_possibilities[-1])
-            return final_possibilities[-1][2], final_possibilities[-1][3], min(budget, final_possibilities[-1][1]) #take the edge that will maximize short run score
+            fin_choice = final_possibilities[-1][2], final_possibilities[-1][3], min(budget, final_possibilities[-1][1])
+            # print("evil", fin_choice)
+            return fin_choice #take the edge that will maximize short run score
         else:
             vertex = max([(v[3], v[0]) for v in edge_pos])[1]
             # print("making random move", fin)
-            return (vertex, random.choice(list([x[1] for x in self.edge_list if x[0] == vertex])), 0)
+            fin_choice = (vertex, random.choice(list([x[1] for x in self.edge_list if x[0] == vertex])), 0)
+            # print("evil", fin_choice)
+            return fin_choice
 
 class PredictiveEvilAngryConstrainingRobinHoodCriminal(BaseCriminal):
     AHEAD_PROB = 17
@@ -558,7 +529,9 @@ class PredictiveEvilAngryConstrainingRobinHoodCriminal(BaseCriminal):
             return fin_choice
 
 class HybridBetweenEvilAngryConstrainingRobinHoodCriminalAndAngryConstrainingRobinHoodCriminal(BaseCriminal):
-    COPIED_THRESHOLD = 3
+    COPIED_THRESHOLD = 2
+    TURNS_CONST = 4
+    DEPTH_CONST = 9
 
     def __init__(self, edge_list, begin, ends):
         self.edge_list = edge_list
@@ -569,17 +542,25 @@ class HybridBetweenEvilAngryConstrainingRobinHoodCriminalAndAngryConstrainingRob
         self.number_ahead = 0
         self.num_equal = 0
         self.prev_choice = 0
+        self.evil = 1
         self.num_copied = 0
+        self.turns = 0
+        self.depth = 0
         self.prev_edge = (-1, -1, -1)
 
     def process_updates(self, edge_updates):
-        if len(edge_updates) == 1 and edge_updates[0][0] == self.prev_edge[0] and edge_updates[0][1] == self.prev_edge[
-            1] and edge_updates[0][2] < self.prev_edge[2]:
+        if self.prev_edge[2] == -1:
+            return
+        self.depth += 1
+        if self.prev_edge[2] > 0:
+            self.turns += 1
+        if edge_updates[self.prev_edge[0], self.prev_edge[1]] > self.prev_edge[2] and self.turns < self.TURNS_CONST:
             self.num_copied += 1
         for upd in edge_updates:
             self.G[upd[0]][upd[1]]['weight'] += edge_updates[upd]
 
     def play_evil_angry_constraining_robin_hood(self, edge_updates, vertex_count, budget):
+        # print("evil")
         # For each populated vertex, check if there exists a unique
         populated_vertices = [(vertex_count[z], z) for z in vertex_count.keys() if vertex_count[z] > 0]
         populated_vertices.sort()
@@ -591,8 +572,8 @@ class HybridBetweenEvilAngryConstrainingRobinHoodCriminalAndAngryConstrainingRob
             vertex_weights.sort()
             if len(vertex_weights) == 1:
                 edge_pos.append(
-                    (cv, vertex_weights[0][1], budget // 2 + (budget // 4 if cv_count < 2 else budget // 2), cv_count))
-                self.num_copied = 0
+                    (cv, vertex_weights[0][1], budget if (cv_count > 1 or self.depth >= self.DEPTH_CONST) else budget * 3//5, cv_count))
+                self.evil = 0
             else:
                 edge_pos.append((cv, vertex_weights[0][1], vertex_weights[1][0] - vertex_weights[0][0], cv_count))
         final_possibilities = [(v[2] * v[3], v[2], v[0], v[1]) for v in edge_pos]
@@ -600,50 +581,110 @@ class HybridBetweenEvilAngryConstrainingRobinHoodCriminalAndAngryConstrainingRob
         # print(final_possibilities)
         if len(final_possibilities):
             # print("final", final_possibilities[-1])
-            return final_possibilities[-1][2], final_possibilities[-1][3], min(budget, final_possibilities[-1][
-                1])  # take the edge that will maximize short run score
+            return final_possibilities[-1][2], final_possibilities[-1][3], min(budget, final_possibilities[-1][1])  # take the edge that will maximize short run score
         else:
             vertex = max([(v[3], v[0]) for v in edge_pos])[1]
             # print("making random move", fin)
             return (vertex, random.choice(list([x[1] for x in self.edge_list if x[0] == vertex])), 0)
 
     def play_angry_constraining_robin_hood(self, edge_updates, vertex_count, budget):
-        # print("current budget for angry", budget)
-        # For each populated vertex, check if there exists a unique
         populated_vertices = [(vertex_count[z], z) for z in vertex_count.keys() if vertex_count[z] > 0]
         populated_vertices.sort()
-        edge_pos = []  # start node, end node, amount of change, number of students on each node
+        edge_pos = [] #start node, end node, amount of change, number of students on each node
         for cv_count, cv in populated_vertices:
             if cv in self.ends:
                 continue
             vertex_weights = [(self.G[cv][v]['weight'], v) for v in list(self.G.neighbors(cv))]
             vertex_weights.sort()
             if len(vertex_weights) == 1:
-                edge_pos.append(
-                    (cv, vertex_weights[0][1], budget // 2 + (1 if cv_count < 2 else budget // 2 + 1), cv_count))
+                edge_pos.append((cv, vertex_weights[0][1], budget-1 if (cv_count > 1 or self.turns > 10) else budget//2-1, cv_count))
             else:
                 edge_pos.append((cv, vertex_weights[0][1], vertex_weights[1][0] - vertex_weights[0][0], cv_count))
-        final_possibilities = [((v[2] - 1) * v[3], v[2] - 1, v[0], v[1]) for v in edge_pos if v[2] - 1 > 0]
+        final_possibilities = [((v[2] - 1) * v[3], v[2]-1, v[0], v[1]) for v in edge_pos if v[2] - 1 > 0]
         final_possibilities.sort()
         # print(final_possibilities)
         if len(final_possibilities):
-            # print("final", (final_possibilities[-1][2], final_possibilities[-1][3], min(budget, final_possibilities[-1][1])))
-            fin_choice = final_possibilities[-1][2], final_possibilities[-1][3], min(budget,
-                                                                                     final_possibilities[-1][1])
-            # print("calculated move", fin_choice)
-            return fin_choice  # take the edge that will maximize short run score
+            # print("final", final_possibilities[-1])
+            fin_choice = final_possibilities[-1][2], final_possibilities[-1][3], min(budget, final_possibilities[-1][1]) #take the edge that will maximize short run score
+            return fin_choice #take the edge that will maximize short run score
         else:
-            vertex = max([(v[3], v[0]) for v in edge_pos])[1]
-            # print("making random move", fin)
-            return (vertex, random.choice(list([x[1] for x in self.edge_list if x[0] == vertex])), 0)
-        self.process_updates(edge_updates)
+            return self.begin, list(self.G.neighbors(self.begin))[0], 0 #skip this turn (very unlikely)
 
     def strategy(self, edge_updates, vertex_count, budget):
         self.process_updates(edge_updates)
         fin_choice = (-1, -1, -1)
-        if self.num_copied >= self.COPIED_THRESHOLD:
+        if self.evil and not (self.turns >= self.TURNS_CONST and self.num_copied < self.COPIED_THRESHOLD):
             fin_choice = self.play_evil_angry_constraining_robin_hood(edge_updates, vertex_count, budget)
         else:
             fin_choice = self.play_angry_constraining_robin_hood(edge_updates, vertex_count, budget)
         self.prev_edge = fin_choice
         return fin_choice
+
+class HeroicAngryConstrainingRobinHoodCriminal(BaseCriminal):
+    MAX_SPEND = 75
+    PRED_LIM = 3
+    PRED_CHECK = 5
+    def __init__(self, edge_list, begin, ends):
+        self.edge_list = edge_list
+        self.begin = begin
+        self.ends = ends
+        self.G = nx.DiGraph()
+        self.G.add_weighted_edges_from(edge_list)
+        self.G.predicting = 2
+        self.G.spent = 1
+    def process_updates(self, edge_updates):
+        for upd in edge_updates:
+            self.G[upd[0]][upd[1]]['weight'] += edge_updates[upd]
+    def upd_pred(self):
+        self.G.predicting = (self.G.predicting + self.G.spent) % self.PRED_CHECK
+    def strategy(self, edge_updates, vertex_count, budget):
+        # print("predicting?", self.G.predicting)
+        # For each populated vertex, check if there exists a unique
+        self.process_updates(edge_updates)
+        populated_vertices = [(vertex_count[z], z) for z in vertex_count.keys() if vertex_count[z] > 0]
+        populated_vertices.sort()
+        edge_pos = [] #start node, end node, amount of change, number of students on each node
+        for cv_count, cv in populated_vertices:
+            if cv in self.ends:
+                continue
+            vertex_weights = [(self.G[cv][v]['weight'], v) for v in list(self.G.neighbors(cv))]
+            vertex_weights.sort()
+            if len(vertex_weights) == 1:
+                edge_pos.append((cv, vertex_weights[0][1], budget if cv_count > 1 else budget//2, cv_count))
+            else:
+                edge_pos.append((cv, vertex_weights[0][1], vertex_weights[1][0] - vertex_weights[0][0], cv_count))
+        final_possibilities = [(v[2] * v[3], v[2], v[0], v[1]) for v in edge_pos if v[2] > 0]
+        final_possibilities.sort()
+        # print(final_possibilities)
+        if len(final_possibilities):
+            # print("final", final_possibilities[-1])
+            fin_choice = final_possibilities[-1][2], final_possibilities[-1][3], min(budget, final_possibilities[-1][1]) #take the edge that will maximize short run score
+            # print("hero", fin_choice)
+            return fin_choice #take the edge that will maximize short run score
+        else:
+            # calculate a score based on the expected winnings from each minimum vertex adjacent to a populated vertex
+            # assert len(edge_pos) != 0
+            min_list = [(x[0], min(list([(self.G[v[0]][v[1]]['weight'], v[1]) for v in self.edge_list if v[0] == x[1]]))[1]) for x in populated_vertices if x[1] not in self.ends]
+            next_pos = []
+            for cv_count, cv in min_list:
+                if cv in self.ends:
+                    continue
+                vertex_weights = [(self.G[cv][v]['weight'], v) for v in list(self.G.neighbors(cv))]
+                vertex_weights.sort()
+                if len(vertex_weights) > 1:
+                    next_pos.append((cv, vertex_weights[0][1], vertex_weights[1][0] - vertex_weights[0][0], cv_count))
+            final_second = [(v[2] * v[3], v[2], v[0], v[1]) for v in next_pos if v[2] > 0]
+            final_second.sort()
+            # print("final_possibilities", final_possibilities)
+            if len(final_second) == 0:
+                # print("here")
+                return self.begin, list(self.G.neighbors(self.begin))[0], 0 #skip this turn (very unlikely)
+
+            #add as much as is reasonable to the second smallest edge
+
+            # print("neighbors", list(self.G.neighbors(vertex)))
+            fin_choice = final_second[-1][2], final_second[-1][3], min(budget, final_second[-1][1])
+            # print("hero predicts", fin_choice)
+            # print("helper move", fin_choice)
+            # print(self.number_random)
+            return fin_choice
