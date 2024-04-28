@@ -275,6 +275,8 @@ class Planner:
                         tips.append((i, j))
         while len(tips) > 0:
             i, j = tips.pop()
+            if any([((i,j) == pair[0]) or ((i,j) == pair[1])  for pair in self.pairs]):
+                continue
             sentPlan[i][j] = 0
             for x, y in [(i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1)]:
                 if x < 0 or x >= self.n or y < 0 or y >= self.n:
@@ -543,7 +545,7 @@ class Planner:
 
         del_i, del_j = self.rand_dist_from_border(self.border_width)
 
-        while not self.sentPlan[del_i][del_j] and not (del_i, del_j) in self.necessary:
+        while not self.sentPlan[del_i][del_j] and not (del_i, del_j) in self.necessary and all([not (del_i, del_j) == tuple(pair[0]) and not (del_i, del_j) == tuple(pair[1]) for pair in self.pairs]):
             #print(del_i, del_j)
             del_i, del_j = self.rand_dist_from_border(self.border_width)
 
@@ -597,7 +599,7 @@ class Planner:
             self.last_rmv.append( (del_i, del_j) )
 
         self.sentPlan = self.remove_islands(self.sentPlan)
-        #self.sentPlan = self.remove_branches(self.sentPlan)
+        self.sentPlan = self.remove_branches(self.sentPlan)
         return self.sentPlan
     
     def random_blossom(self, q, queryOutputs):
@@ -703,6 +705,7 @@ class Planner:
         return self.shave_from_border_v3(q, queryOutputs)
 
     def task2(self, q, queryOutputs): # p = 5, bd = 0.1
+        return self.shave_from_border_v3(q, queryOutputs)
         return self.task1(q, queryOutputs)
 
     def task3(self, q, queryOutputs): # p = 1, bd = 0.25
