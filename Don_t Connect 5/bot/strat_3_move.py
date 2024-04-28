@@ -284,7 +284,7 @@ def top_move(board_copy, player):
     
     return moves[0]
 
-def strat_2_allow_move(board_copy, player):
+def post_move(board_copy, player):
     sc = score(board_copy)
     enes = [0, 1, 2]
     enes.pop(player)
@@ -314,3 +314,88 @@ def strat_2_allow_move(board_copy, player):
     
     # print('good move', my_move)
     return my_move[3]
+
+def strat_3_move(board_copy, player):
+    sc = score(board_copy)
+
+    # after getting 4 groups, want to start filling in
+    start_fill = list(board_copy.values()).count(player) >= 14
+
+    l = [(3, -3, 1), (4, 0, -2), (1, 3, -3), (-2, 4, 0), (-3, 1, 3), (0, -2, 4)]
+    r = [(4, -2, 0), (3, 1, -3), (0, 4, -2), (-3, 3, 1), (-2, 0, 4), (1, -3, 3)]
+    l1 = [(4, -3, 1), (4, 0, -3), (1, 4, -3), (-3, 4, 0), (-3, 1, 4), (0, -3, 4)]
+    r1 = [(4, -3, 0), (4, 1, -3), (0, 4, -3), (-3, 4, 1), (-3, 0, 4), (1, -3, 4)]
+
+    perm = [i for i in range(6)]
+    random.shuffle(perm)
+    for i in range(6):
+        l = [l[perm[i]] for i in range(6)]
+        r = [r[perm[i]] for i in range(6)]
+        l1 = [l1[perm[i]] for i in range(6)]
+        r1 = [r1[perm[i]] for i in range(6)]
+
+
+    board_send = board_copy.copy()
+
+    num_claimed = 0
+
+    move = None
+
+    # check if any moves need to do now
+    for i in range(6):
+        if (l[i] in board_copy and board_copy[l[i]] == player and r[i] in board_copy and board_copy[r[i]] == player):
+            # both ends filled
+            if l1[i] in board_copy and board_copy[l1[i]] != player or r1[i] in board_copy and board_copy[r1[i]] != player:
+                # this can't be claimed
+                continue
+            
+            num_claimed += 1
+            
+            if not start_fill:
+                board_send[l1[i]] = board_send[r1[i]] = player
+
+            if start_fill:
+                if l1[i] not in board_copy:
+                    move = l1[i]
+                    break
+                if r1[i] not in board_copy:
+                    move = r1[i]
+                    break
+                
+    # can claim any pairs
+
+    if move is None:
+        if num_claimed < 2 and not start_fill:
+            for i in range(6):
+                if l1[i] in board_copy and board_copy[l1[i]] != player or r1[i] in board_copy and board_copy[r1[i]] != player:
+                    # this can't be claimed
+                    continue
+                if (l[i] in board_copy and board_copy[l[i]] == player and r[i] not in board_copy):
+                    move = r[i]
+                    break
+
+    if move is None:
+        if num_claimed < 2 and not start_fill:
+            for i in range(6):
+                if l1[i] in board_copy and board_copy[l1[i]] != player or r1[i] in board_copy and board_copy[r1[i]] != player:
+                    # this can't be claimed
+                    continue
+                if (l[i] not in board_copy and r[i] not in board_copy):
+                    move = l[i]
+                    break
+                if (r[i] in board_copy and board_copy[r[i]] == player and l[i] not in board_copy):
+                    move = l[i]
+                    break
+
+    # otherwise, proceed with sent board
+
+    if move is None:
+        move = post_move(board_send, player)
+
+    if move is None:
+        return None
+
+    if see_move(board_copy, player, post_move(board_send, player)) != -1:
+        return move
+
+    return post_move(board_copy, player)

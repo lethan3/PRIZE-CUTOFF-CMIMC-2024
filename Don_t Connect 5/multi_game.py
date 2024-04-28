@@ -10,7 +10,7 @@ os.chdir(dirname(abspath(__file__)))
 # Setting
 
 WRITE = True
-NGAME = 300
+NGAME = 99
 DEBUG = True
 
 # file path
@@ -44,7 +44,7 @@ for n in range(NGAME):
     if (n // (NGAME // 10) != (n - 1) // (NGAME // 10)):
         print(str(n // (NGAME // 10) * 10) + '% done')
 
-    res = run_game(player_list, funcs)
+    res = run_game_list(player_list, funcs)
     
     cnt = 0
     for i in range(3):
