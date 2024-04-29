@@ -64,14 +64,65 @@ all_diam_4 |= new_diam_4
 
 # print(len(all_diam_4))
 
-find_by_node = {}
+find_cc4_by_node = {}
 
 for cc in all_diam_4:
     for i in range(len(cc)):
-        if cc[i] in find_by_node:
-            find_by_node[cc[i]].append(cc)
+        if cc[i] in find_cc4_by_node:
+            find_cc4_by_node[cc[i]].append(cc)
         else:
-            find_by_node[cc[i]] = [cc]
+            find_cc4_by_node[cc[i]] = [cc]
+
+# FIND ALL DIAMETER 3 CCs
+
+
+all_diam_3 = set()
+
+curr_cc_3 = []
+def dfs3(node, depth = 1):
+    curr_cc_3.append(node)
+
+    if (depth == 4):
+        if curr_cc_3[-1] > curr_cc_3[0]:
+            all_diam_3.add(tuple(curr_cc_3))
+        curr_cc_3.pop(-1)
+        return
+
+    for ne in NEIGHBOR_LIST[node]:
+        if ne not in curr_cc_3:
+            dfs3(ne, depth + 1)
+    
+    curr_cc_3.pop(-1)
+
+for node in node_coordinates:
+    dfs3(node)
+
+# print(len(all_diam_3))
+
+new_diam_3 = set()
+
+for cc in all_diam_3:
+    cc = list(cc)
+    for i in range(2):
+        ncc = cc
+        if i:
+            for ne in NEIGHBOR_LIST[ncc[1]]:
+                if ne not in ncc:
+                    ncc.append(ne)
+        new_diam_3.add(tuple(ncc))
+
+all_diam_3 |= new_diam_3
+
+# print(len(all_diam_3))
+
+find_cc3_by_node = {}
+
+for cc in all_diam_3:
+    for i in range(len(cc)):
+        if cc[i] in find_cc3_by_node:
+            find_cc3_by_node[cc[i]].append(cc)
+        else:
+            find_cc3_by_node[cc[i]] = [cc]
             
 
 def get_diameter(board, start_node, visit): 
@@ -145,6 +196,84 @@ def score(board): # return current score for each player
 move_num = -2
 smove = -1
 
+def find_working_cc(board_copy, node, find_set):
+    q = deque()
+    q.append((node, 0))
+
+    enemy_cc = set()
+    enemy_cc.add(node)
+
+    liberties = []
+    while not len(q) == 0:
+        qnode, d = q[0]
+        q.popleft()
+        for ne in NEIGHBOR_LIST[qnode]:
+            if ne not in enemy_cc and ne in board_copy and board_copy[ne] == board_copy[qnode]:
+                q.append((ne, d + 1))
+                enemy_cc.add(ne)
+            if ne not in board_copy:
+                liberties.append(ne)
+    
+    working_cc4 = []
+
+    for cc4 in find_set[node]:
+        if move_num == smove: print(cc4)
+        # check that enemy_cc is subset of cc4
+        is_subset = True
+        for a in enemy_cc:
+            if a not in cc4:
+                if move_num == smove: print(a)
+                is_subset = False
+                break
+
+        if not is_subset:
+            if move_num == smove: print('not subset')
+            continue
+
+        addl = 0
+        for a in cc4:
+            if a not in board_copy:
+                addl += 1
+        
+
+        # check that no neighbors
+        no_neighbors = True
+        for cc4_node in cc4:
+            for cc4_ne in NEIGHBOR_LIST[cc4_node]:
+                if (cc4_ne in cc4 or cc4_ne in enemy_cc): continue
+                if cc4_ne in board_copy and board_copy[cc4_ne] == board_copy[node]:
+                    no_neighbors = False
+                    break
+
+        if not no_neighbors:
+            if move_num == smove: print('has neighbors')
+            continue
+
+        # check that all in cc4 is safe and untaken
+        all_safe = True
+        for cc4_node in cc4:
+            if cc4_node in board_copy:
+                if board_copy[cc4_node] != board_copy[node]:
+                    if move_num == smove: print('taken')
+                    all_safe = False
+                    break
+            if cc4_node not in board_copy and see_move(board_copy, board_copy[node], cc4_node) == -1:
+                if move_num == smove: print('unsafe')
+                all_safe = False
+                break
+        
+        if not all_safe:
+            continue
+        
+        # cc4 is valid
+
+        if move_num == smove: print('appended')
+        working_cc4.append((addl, cc4))
+    
+    working_cc4.sort()
+
+    return (enemy_cc, liberties, working_cc4)
+
 def find_sabotage(board_copy, player):
     global first_move
     found = [set(), set(), set()]
@@ -158,94 +287,19 @@ def find_sabotage(board_copy, player):
         if move_num == smove:
             print("NODE:", node)
 
-        q = deque()
-        q.append((node, 0))
-        visited.add(node)
-
-        enemy_cc = set()
-        enemy_cc.add(node)
-
-        liberties = []
-        while not len(q) == 0:
-            qnode, d = q[0]
-            q.popleft()
-            for ne in NEIGHBOR_LIST[qnode]:
-                if ne not in visited and ne in board_copy and board_copy[ne] == board_copy[qnode]:
-                    q.append((ne, d + 1))
-                    visited.add(ne)
-                    enemy_cc.add(ne)
-                if ne not in board_copy:
-                    liberties.append(ne)
+        enemy_cc, liberties, working_cc4 = find_working_cc(board_copy, node, find_cc4_by_node)
 
         if get_diameter(board_copy, node, visit_cc) >= 4 or len(enemy_cc) <= 1:
             # group already has diam 4
             if move_num == smove:
                 print("skipped")
             continue
-        
-        working_cc4 = []
 
-        for cc4 in find_by_node[node]:
-            if move_num == smove: print(cc4)
-            # check that enemy_cc is subset of cc4
-            is_subset = True
-            for a in enemy_cc:
-                if a not in cc4:
-                    if move_num == smove: print(a)
-                    is_subset = False
-                    break
-
-            if not is_subset:
-                if move_num == smove: print('not subset')
-                continue
-
-            addl = 0
-            for a in cc4:
-                if a not in board_copy:
-                    addl += 1
-            
-
-            # check that no neighbors
-            no_neighbors = True
-            for cc4_node in cc4:
-                for cc4_ne in NEIGHBOR_LIST[cc4_node]:
-                    if (cc4_ne in cc4 or cc4_ne in enemy_cc): continue
-                    if cc4_ne in board_copy and board_copy[cc4_ne] == board_copy[node]:
-                        no_neighbors = False
-                        break
-
-            if not no_neighbors:
-                if move_num == smove: print('has neighbors')
-                continue
-
-            # check that all in cc4 is safe and untaken
-            all_safe = True
-            for cc4_node in cc4:
-                if cc4_node in board_copy:
-                    if board_copy[cc4_node] != board_copy[node]:
-                        if move_num == smove: print('taken')
-                        all_safe = False
-                        break
-                if cc4_node not in board_copy and see_move(board_copy, board_copy[node], cc4_node) == -1:
-                    if move_num == smove: print('unsafe')
-                    all_safe = False
-                    break
-            
-            if not all_safe:
-                continue
-            
-            # cc4 is valid
-
-            if move_num == smove: print('appended')
-            working_cc4.append((addl, cc4))
-        
         if len(working_cc4) == 0:
             # group is dead
             continue
-        
-        if move_num == smove: print('number of working cc4:', len(working_cc4))
 
-        working_cc4.sort()
+        if move_num == smove: print('number of working cc4:', len(working_cc4))
 
         for lib in liberties:
             cc4_not_in = []
@@ -311,54 +365,22 @@ def on_outborder(pos):
     return on_border(pos) and not on_inborder(pos)
 
 def openness_value(board_copy, player, pos): # return how open a cell is for expansion
-    q = deque()
-    q.append((pos, 0, True))
-
-    visited = set(pos)
-
-    open_val = 0
-
-    have_border = False
-    
-    dists = [0, 0, 0, 0]
-
     board_new = board_copy.copy()
     board_new[pos] = player
 
-    visit = {p:0 for p in node_coordinates}
+    player_cc, liberties, working_cc4 = find_working_cc(board_new, pos, find_cc4_by_node)
 
-    whitelist = set()
-    while not len(q) == 0:
-        node, d, in_cc = q[0]
-        q.popleft()
-        if (d != 0): 
-            player_border = False
-            for ne in NEIGHBOR_LIST[node]:
-                if ne in board_copy and board_copy[ne] == player and not in_cc and ne not in whitelist:
-                    player_border = True
-            if not player_border:
-                if d <= 3: dists[d] += 1
-                board_new[node] = player
-            
-        for ne in NEIGHBOR_LIST[node]:
-            if ne not in visited and ne not in board_copy:
-                q.append((ne, d + 1, False))
-                visited.add(ne)
-            if in_cc and ne not in visited and ne in board_copy and board_copy[ne] == player:
-                q.append((ne, d + 1, in_cc))
-                visited.add(ne)
-                whitelist.add(ne)
-                if (on_border(ne)):
-                    have_border = True
+    player_cc, liberties, working_cc3 = find_working_cc(board_new, pos, find_cc3_by_node)
+
+    if len(working_cc3) == 0:
+        return 0
+    
+    open_val = 0
 
     if on_inborder(pos):
         open_val += 1
     if on_outborder(pos):
         open_val -= 1
-
-    # open_val = (0, 6, 16, 18)[dists[1]] + 3 * dists[2] + dists[3]
-
-    # dist_2_good = False
 
     for i in range(3):
         for j in range(3):
@@ -375,10 +397,7 @@ def openness_value(board_copy, player, pos): # return how open a cell is for exp
     # if (dist_2_good):
     #     open_val += 3
     
-    diam = get_diameter(board_new, pos, visit)
-    if (diam >= 4): return open_val + 400
-    if (diam == 3): return open_val + 300
-    return 0
+    return 10000 * max(len(working_cc4), 5) + 100 * max(len(working_cc3), 5) + open_val
 
     # if diam < 3:
     #     return 0
