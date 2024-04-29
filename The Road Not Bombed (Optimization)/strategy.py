@@ -34,6 +34,7 @@ class Planner:
         self.order = [0,1,2,3,4,5]
         self.path_padding = 10
         self.not_restarted = True
+        self.test_mid = 0
         return
     
     def load_png(self, image_path):
@@ -557,6 +558,7 @@ class Planner:
     
 
     def shave_from_line(self, q, queryOutputs, line_func):
+        dist = abs(self.pairs[0][0][0] - self.pairs[0][1][0]) + abs(self.pairs[0][0][1] - self.pairs[0][1][1])
         if not self.good_line or q == 100 or self.restart:
             if len(queryOutputs) == 0 or not queryOutputs[-1] or self.restart:
                 self.restart = False
@@ -564,6 +566,8 @@ class Planner:
                 self.sentPlan = [[0]*self.n for i in range(self.n)]
                 for pair in self.pairs:
                     self.sentPlan = self.combine(self.sentPlan, line_func(pair[0], pair[1], self.line_width, self.tolerance, self.width_tolerance))
+                
+                #print(q)
                 return (self.sentPlan,0)
             else:
                 self.good_line = True
@@ -586,9 +590,11 @@ class Planner:
         all_points = [(i,j) for i in range(self.n) for j in range(self.n) if self.sentPlan[i][j] == 1]
         random.shuffle(all_points)
         all_points += points_on_border
-        #print(points_on_border)
 
-        for i in range(2): 
+        ones = self.count_ones(self.sentPlan)
+        #print(points_on_border)
+        
+        for i in range(2 if ones > dist+10 else 1): 
             #del_i, del_j = random.choice(points_on_border)
             if len(all_points) == 0:
                 break
@@ -610,11 +616,41 @@ class Planner:
                 break
             self.sentPlan[del_i][del_j] = False
             self.last_rmv.append( (del_i, del_j) )
-
-        done = del_i == -1
+        done = 0
 
         self.sentPlan = self.remove_islands(self.sentPlan)
         self.sentPlan = self.remove_branches(self.sentPlan)
+        ones = self.count_ones(self.sentPlan)
+        #print(ones)
+        
+        if(del_i == -1 or ones <= 2):
+            #delete first half of the roads
+            self.sentPlan = copy.deepcopy(self.bestPlan)
+            ones = self.count_ones(self.sentPlan)
+            if self.test_mid == 0:
+                cur = (self.pairs[0][0][0], self.pairs[0][0][1])
+            else:
+                cur = (self.pairs[0][1][0], self.pairs[0][1][1])
+            cnt = 0
+            dirs = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+            while cnt < ones//2:
+                self.sentPlan[cur[0]][cur[1]] = 0
+                cnt += 1
+                for dir in dirs:
+                    x, y = cur[0] + dir[0], cur[1] + dir[1]
+                    if x < 0 or x >= self.n or y < 0 or y >= self.n or self.sentPlan[x][y] == 0:
+                        continue
+                    cur = (x, y)
+                    break
+
+            self.sentPlan = self.combine(self.sentPlan, self.random_path(cur, self.pairs[0][0] if self.test_mid == 0 else self.pairs[0][1], 1, 0, 0))
+            done = self.test_mid
+            #print("DONE")
+            self.test_mid = 1
+            return (self.sentPlan, 0)
+                
+
+        
         return (self.sentPlan,done)
     
     
@@ -736,6 +772,7 @@ class Planner:
         random.shuffle(points_on_border)
         all_points = [ (i,j) for i in range(self.n) for j in range(self.n) if self.sentPlan[i][j] == 1]
         random.shuffle(all_points)
+        #all_points.sort(key = lambda x: abs(x[0] - self.n//2) + abs(x[1] - self.n//2), reverse = True)
         #print(points_on_border)
 
         
@@ -873,7 +910,7 @@ class Planner:
         
             #print(del_i, del_j)
             
-        for i in range((3 if q > 70 else (3 if q > 60 else 1))):
+        for i in range((4 if q > 70 else (3 if q > 60 else 1))):
             del_i, del_j = self.rand_dist_from_border(self.border_width) if q > 30 else random.choice(points_on_border)
             loop_counter = 0
             while not self.sentPlan[del_i][del_j] or  (del_i, del_j) in self.necessary or any([(del_i, del_j) == tuple(pair[0]) or (del_i, del_j) == tuple(pair[1]) for pair in self.pairs]) or not self.road_not_needed(self.sentPlan, (del_i, del_j)):
@@ -961,28 +998,37 @@ class Planner:
             vals.sort(key=lambda x: x[1], reverse=True)
             for i in range(4):
                 self.order[i+1] = vals[i][0]
+            
         #print(self.order)
-
-        return self.shave_from_border_v4(q, queryOutputs)
+        #return self.shave_from_line(q, queryOutputs, self.random_path)[0]
+        return self.shave_from_border_v5(q, queryOutputs)
         #return self.task1(q, queryOutputs)
 
     def task3(self, q, queryOutputs): # p = 1, bd = 0.25
         #return self.shave_from_border_v4(q, queryOutputs)
+        #if q <= 10: return self.theoretical_max(q, queryOutputs)   
         x = self.shave_from_line(q, queryOutputs, self.random_path)
         if x[1]:
             self.restart = True
+            self.line_width = 0
+            self.test_mid = 0
         return x[0]
         #return self.task1(q, queryOutputs)
 
 
     def task4(self, q, queryOutputs): # p = 1, bd = 0.1
         #return self.shave_from_border_v3(q, queryOutputs)
-        if q == 60 and self.not_restarted: self.restart = True
+        if q == 60 and self.not_restarted:
+            self.restart = True
+            self.line_width = 0
+            self.test_mid = 0
         if q <= 10: return self.theoretical_max(q, queryOutputs)    
         x = self.shave_from_line(q, queryOutputs, self.random_path)
         if x[1]:
             self.restart = True
             self.not_restarted = False
+            self.line_width = 0
+            self.test_mid = 0
         return x[0]
         #return self.task1(q, queryOutputs)
 
@@ -997,6 +1043,11 @@ class Planner:
 
         return path
         # draw right angle between the two points
+    
+    def theoretical_max_v2(self, q, queryOutputs):
+        if q==100: 
+            self.last_rmv = []
+        return self.shave_from_border_v5(q, queryOutputs)
 
     def query(self, q, queryOutputs):
         # feel free to modify this function, this is just a suggestion
@@ -1018,4 +1069,4 @@ class Planner:
             return self.theoretical_max(q, queryOutputs)
         
         if len(self.pairs) == 5 and self.bd == 0:
-            return self.theoretical_max(q, queryOutputs)
+            return self.theoretical_max_v2(q, queryOutputs)
