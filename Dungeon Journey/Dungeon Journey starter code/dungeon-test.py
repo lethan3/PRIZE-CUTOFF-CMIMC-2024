@@ -149,6 +149,7 @@ def main():
 
         dungeon, halts, steps, _ = simulate(table, dungeon, alice, bob)
         print("Ran for " + str(steps) + " steps")
+        '''
         print_dungeon(
             steps,
             alphabet,
@@ -156,6 +157,7 @@ def main():
             alice + np.array([RADIUS, RADIUS]),
             bob + np.array([RADIUS, RADIUS]),
         )
+        '''
 
 
 if __name__ == "__main__":

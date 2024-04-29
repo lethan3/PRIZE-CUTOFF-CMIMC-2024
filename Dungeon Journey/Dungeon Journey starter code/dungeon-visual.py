@@ -9,7 +9,7 @@ import pygame
 from utils import *
 
 # Restrict dungeon to rooms (x,y) with max(x,y) <= RADIUS. Change to 1000 for some bonus problems
-RADIUS = 1000
+RADIUS = 100
 
 # Restrict to MAX_STEP steps (days). Change to 1,000,000 for some bonus problems
 MAX_STEP = 1000000
