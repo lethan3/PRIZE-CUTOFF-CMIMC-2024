@@ -142,7 +142,7 @@ def score(board): # return current score for each player
                 scores[board[pos]] += TABLE[d]
     return scores
 
-move_num = -1
+move_num = -2
 smove = -1
 
 def find_sabotage(board_copy, player):
@@ -163,6 +163,7 @@ def find_sabotage(board_copy, player):
         visited.add(node)
 
         enemy_cc = set()
+        enemy_cc.add(node)
 
         liberties = []
         while not len(q) == 0:
@@ -178,6 +179,8 @@ def find_sabotage(board_copy, player):
 
         if get_diameter(board_copy, node, visit_cc) >= 4 or len(enemy_cc) <= 1:
             # group already has diam 4
+            if move_num == smove:
+                print("skipped")
             continue
         
         working_cc4 = []
@@ -188,17 +191,19 @@ def find_sabotage(board_copy, player):
             is_subset = True
             for a in enemy_cc:
                 if a not in cc4:
+                    if move_num == smove: print(a)
                     is_subset = False
                     break
-            
-            addl = 0
-            for a in cc4:
-                if a not in enemy_cc:
-                    addl += 1
-            
+
             if not is_subset:
                 if move_num == smove: print('not subset')
                 continue
+
+            addl = 0
+            for a in cc4:
+                if a not in board_copy:
+                    addl += 1
+            
 
             # check that no neighbors
             no_neighbors = True
@@ -251,11 +256,18 @@ def find_sabotage(board_copy, player):
             cc4_not_in.sort(key=lambda a : len(a))
         
             if len(working_cc4) and len(cc4_not_in) == 0:
-                if move_num == smove: print("found sabotage, complete block:", lib)
-                found[board_copy[node]].add(lib)
-            elif working_cc4[0][0] < cc4_not_in[0][0]:
-                if move_num == smove: print("found sabotage, limit block:", lib)
-                found[board_copy[node]].add(lib)
+                if working_cc4[0][0] < 2:
+                    if move_num == smove: print("found sabotage, complete block:", lib)
+                    found[board_copy[node]].add(lib)
+                else:
+                    if move_num == smove: print("no complete block, 2 moves to fill:", lib)
+            elif len(working_cc4) and len(cc4_not_in) and working_cc4[0][0] < cc4_not_in[0][0]:
+                if working_cc4[0][0] < 2:
+                    if move_num == smove: print("found sabotage, limit block:", lib)
+                    found[board_copy[node]].add(lib)
+                else:
+                    if move_num == smove: print("no limit block, 2 moves to fill:", lib)
+
 
     return found
 
@@ -393,7 +405,7 @@ def top_move(board_copy, player):
     for node in node_coordinates:
         if node not in board_copy:
             val = see_move(board_copy, player, node)
-            sab_val = 2 if node in fs[enes[1]] else 0 if node in fs[enes[0]] else 0
+            sab_val = 2 if node in fs[enes[1]] else 1 if node in fs[enes[0]] else 0
             ov = openness_value(board_copy, player, node)
 
             moves.append((val, sab_val, ov, node))
