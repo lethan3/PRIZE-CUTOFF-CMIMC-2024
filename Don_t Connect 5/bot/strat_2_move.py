@@ -385,7 +385,7 @@ def openness_value(board_copy, player, pos): # return how open a cell is for exp
     if on_inborder(pos):
         open_val += 1
     if on_outborder(pos):
-        open_val -= 1
+        open_val -= 2
 
     for i in range(3):
         for j in range(3):
@@ -402,7 +402,7 @@ def openness_value(board_copy, player, pos): # return how open a cell is for exp
     # if (dist_2_good):
     #     open_val += 3
     
-    return 10000 * min(len(working_cc4), turn // 4) + 100 * min(len(working_cc3), turn // 4) + open_val
+    return 10000 * min(len(working_cc4), turn // 4 + 1) + 100 * min(len(working_cc3), turn // 4 + 1) + open_val
 
     # if diam < 3:
     #     return 0
@@ -436,6 +436,9 @@ def top_move(board_copy, player):
 
     moves.append((0, 0, 0, None))
     moves.sort(reverse=True)
+
+    # print(moves)
+    # print("+++++++++++++++")
 
     for move in moves:
         if (move[0] == 4) and move[2] < 20000:
@@ -499,4 +502,5 @@ def strat_2_move(board_copy, player):
     
     # print('good move', my_move)
     # if my_move[1]: print(move_num, "SABOTAGE")
+    # print(turn, my_move)
     return my_move[3]
