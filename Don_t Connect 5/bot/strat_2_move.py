@@ -438,11 +438,15 @@ def top_move(board_copy, player):
     moves.sort(reverse=True)
 
     for move in moves:
-        if (move[0] == 4):
+        if (move[0] == 4) and move[2] < 20000:
             return move
     
     for move in moves:
         if (move[1] and move[0] != -1):
+            return move
+    
+    for move in moves:
+        if (move[0] == 4):
             return move
 
     # print(moves[0][0], ':', moves[0][3])
