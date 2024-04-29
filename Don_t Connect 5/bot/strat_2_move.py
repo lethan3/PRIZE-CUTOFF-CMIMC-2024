@@ -310,13 +310,13 @@ def find_sabotage(board_copy, player):
             cc4_not_in.sort(key=lambda a : len(a))
         
             if len(working_cc4) and len(cc4_not_in) == 0:
-                if working_cc4[0][0] < 2:
+                if working_cc4[0][0] < 2 and len(working_cc4) >= 2:
                     if move_num == smove: print("found sabotage, complete block:", lib)
                     found[board_copy[node]].add(lib)
                 else:
                     if move_num == smove: print("no complete block, 2 moves to fill:", lib)
             elif len(working_cc4) and len(cc4_not_in) and working_cc4[0][0] < cc4_not_in[0][0]:
-                if working_cc4[0][0] < 2:
+                if working_cc4[0][0] < 2 and len(working_cc4) >= 2:
                     if move_num == smove: print("found sabotage, limit block:", lib)
                     found[board_copy[node]].add(lib)
                 else:
@@ -364,10 +364,15 @@ def on_inborder(pos):
 def on_outborder(pos):
     return on_border(pos) and not on_inborder(pos)
 
+turn = 0
+
 def openness_value(board_copy, player, pos): # return how open a cell is for expansion
     board_new = board_copy.copy()
     board_new[pos] = player
 
+    if see_move(board_copy, (player + 1) % 3, pos) == -1 and see_move(board_copy, (player + 2) % 3, pos) == -1:
+        return 0
+    
     player_cc, liberties, working_cc4 = find_working_cc(board_new, pos, find_cc4_by_node)
 
     player_cc, liberties, working_cc3 = find_working_cc(board_new, pos, find_cc3_by_node)
@@ -397,7 +402,7 @@ def openness_value(board_copy, player, pos): # return how open a cell is for exp
     # if (dist_2_good):
     #     open_val += 3
     
-    return 10000 * max(len(working_cc4), 5) + 100 * max(len(working_cc3), 5) + open_val
+    return 10000 * min(len(working_cc4), turn // 4) + 100 * min(len(working_cc3), turn // 4) + open_val
 
     # if diam < 3:
     #     return 0
@@ -448,8 +453,14 @@ def top_move(board_copy, player):
     return moves[0]
 
 def strat_2_move(board_copy, player):
-    global move_num
+    global move_num, turn
     move_num += 3
+
+    turn = 1
+    for b in board_copy:
+        if board_copy[b] == player:
+            turn += 1
+
     sc = score(board_copy)
     enes = [0, 1, 2]
     enes.pop(player)
@@ -466,8 +477,12 @@ def strat_2_move(board_copy, player):
 
         if ene_moves[1][3] is not None and see_move(board_copy, player, ene_moves[1][3]) != -1:
             poss_moves.append(ene_moves[1])
+            if ene_moves[1][0] >= 3:
+                return ene_moves[1][3]
         if ene_moves[0][3] is not None and see_move(board_copy, player, ene_moves[0][3]) != -1:
             poss_moves.append(ene_moves[0])
+            if ene_moves[0][0] >= 3:
+                return ene_moves[0][3]
         
         # poss_moves.sort(reverse=True)
         if len(poss_moves):
