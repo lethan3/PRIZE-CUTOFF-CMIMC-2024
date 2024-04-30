@@ -84,7 +84,7 @@ def print_dungeon(steps, alphabet, dungeon, alice, bob):
     path = "dungeon at " + str(steps) + " steps.png"
     dungeon = np.transpose(dungeon)
 
-    assert len(alphabet) >= 2
+    assert len(alphabet) >= 1
     cm = matplotlib.colormaps["viridis"].colors
 
     def query(c, channel):

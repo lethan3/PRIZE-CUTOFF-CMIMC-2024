@@ -133,7 +133,7 @@ if __name__ == "__main__":
         # edge_list, begin, ends = generate_graph((3, 3), (1, 10), path="game.png")
 
         criminals = [("Hybrid Criminal #1", HybridBetweenEvilAngryConstrainingRobinHoodCriminalAndAngryConstrainingRobinHoodCriminal), ("Evil Criminal #1", AngryConstrainingRobinHoodCriminal)]#("Angry Constraining Robin-Hood Criminal #1", AngryConstrainingRobinHoodCriminal), ("Robin-Hood Criminal #1", RobinHoodCriminal), ("Constraining Criminal #1", ConstrainingCriminal), ("Hot-Headed Criminal #1", HotHeadedCriminal), ("Miffed Criminal #1", MiffedCriminal), ("Crowd Criminal #1", CrowdCriminal), ("Cooldown Criminal #1", CooldownCriminal)]
-        students = [("Random Greedy Student #1", RandomGreedyStudent), ("Random Greedy Student #2", RandomGreedyStudent), ("Random Greedy Student #3", RandomGreedyStudent), ("Greedy Student #4", GreedyStudent), ("Smarter Greedy Student #1", SmarterGreedyStudent), ("Avoidant Greedy Student #1", AvoidantGreedyStudent), ("Random Greedy Student #5", RandomGreedyStudent), ("Cautious Avoidant Greedy Student #1", CautiousAvoidantGreedyStudent)]
+        students = [("Random Greedy Student #1", RandomGreedyStudent), ("Random Greedy Student #2", RandomGreedyStudent), ("Random Greedy Student #3", RandomGreedyStudent), ("Greedy Student #4", GreedyStudent), ("Random Greedy Student #4", RandomGreedyStudent), ("Cautious Greedy Student #1", SimpleGreedyStudent), ("Random Greedy Student #5", RandomGreedyStudent), ("Cautious Avoidant Greedy Student #1", CautiousAvoidantGreedyStudent)]
 
         criminal_scores, student_scores = play(edge_list, begin, ends, criminals, students)
 

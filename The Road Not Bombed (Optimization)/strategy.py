@@ -37,44 +37,6 @@ class Planner:
         self.test_mid = 0
         return
     
-    def load_png(self, image_path):
-        image = Image.open(image_path)
-        width, height = image.size
-        assert width == 16 and height == 16, "Image must be 16x16"
-        tiles = []
-        visted = [[False for i in range(16)] for j in range(16)]
-        names = string.ascii_lowercase+string.ascii_uppercase+string.digits
-        idx = 0
-
-        for y in range(0, height):
-            for x in range(0, width):
-                if not visted[y][x]:
-                    color = image.getpixel((x, y))
-                    section = []
-                    stack = [(y, x)]
-                    while stack:
-                        y1, x1 = stack.pop()
-                        if x1 < 0 or x1 >= width or y1 < 0 or y1 >= height or visted[y1][x1] or image.getpixel((x1, y1)) != color:
-                            continue
-                        visted[y1][x1] = True
-                        section.append((y1, x1))
-                        stack.append((y1 + 1, x1))
-                        stack.append((y1 - 1, x1))
-                        stack.append((y1, x1 + 1))
-                        stack.append((y1, x1 - 1))
-                    tiles.append(section)
-                    for y1, x1 in section:
-                        visted[y1][x1] = names[idx]
-                    idx += 1
-                    idx %= len(names)
-        
-        for k in visted:
-            print(*k)
-
-        for k in tiles:
-            print(*k)
-        self.tiles = tiles
-        self.grid = visted
     
     #*######## LINE FUNCTIONS #########
     def lerp(self, city1, city2, width, tolerance=2, width_tolerance=0.5):
@@ -339,76 +301,8 @@ class Planner:
         return counter
     
 
-    def bridge(self, coord):
-        plan1 = [[1] * self.n for i in range(self.n)]
-        plan2 = [[1] * self.n for i in range(self.n)]
-        diag1 = min(coord[0], coord[1]) + min(self.n - coord[0] - 1, self.n - coord[1] - 1)
-        diag2 = min(coord[1], self.n - coord[0] - 1) + min(coord[0], self.n - coord[1] - 1)
-        cur = coord
-        plan1[coord[0]][coord[1]] = 0
-        plan2[coord[0]][coord[1]] = 0
-        while cur[0] > 0 and cur[1] > 0:
-            cur = (cur[0] - 1, cur[1] - 1)
-            plan1[cur[0]][cur[1]] = 0
-        while cur[0] < self.n - 1 and cur[1] < self.n - 1:
-            cur = (cur[0] + 1, cur[1] + 1)
-            plan1[cur[0]][cur[1]] = 0
-        cur = coord
-        while cur[0] > 0 and cur[1] < self.n - 1:
-            cur = (cur[0] - 1, cur[1] + 1)
-            plan2[cur[0]][cur[1]] = 0
-        while cur[0] < self.n - 1 and cur[1] > 0:
-            cur = (cur[0] + 1, cur[1] - 1)
-            plan2[cur[0]][cur[1]] = 0
-        
-        plan1 = self.remove_islands(plan1)
-        plan2 = self.remove_islands(plan2)
 
-        print(*plan1, sep='\n')
-        print(*plan2, sep='\n')
-        if plan1[self.n-1][0] == 0 or plan1[0][self.n-1] == 0 or plan2[self.n-1][self.n-1] == 0 or plan2[0][0] == 0:
-            return plan1 if diag1 > diag2 else plan2
-        
-        plan1[coord[0]][coord[1]] = 1 
-        plan2[coord[0]][coord[1]] = 1
 
-        if plan1[self.n-1][0] == 0 or plan1[0][self.n-1] == 0:
-            return plan2
-        if plan2[self.n-1][self.n-1] == 0 or plan2[0][0] == 0:
-            return plan1
-        
-        if any([((plan1[pair[0][0]][pair[0][1]] == 0) or (plan1[pair[1][0]][pair[1][1]]==0)) for pair in self.pairs]):
-            return plan2
-        if any([((plan2[pair[0][0]][pair[0][1]]) == 0 or (plan2[pair[1][0]][pair[1][1]]==0)) for pair in self.pairs]):
-            return plan1
-
-        return plan1 if diag1 > diag2 else plan2
-
-    def generate_heatmap(self):
-        heatmap = [[0] * self.n for i in range(self.n)]
-        for i in range(self.n):
-            for j in range(self.n):
-                min_dist = 100000
-                for pair in self.pairs:
-                    min_dist = min(min_dist, abs(i - pair[0][0]) + abs(j - pair[0][1]))
-                    min_dist = min(min_dist, abs(i - pair[1][0]) + abs(j - pair[1][1]))
-                heatmap[i][j] = min_dist
-        return heatmap
-    
-    def generate_heatmap_v2(self):
-        heatmap = [[0] * self.n for i in range(self.n)]
-        for i in range(self.n):
-            for j in range(self.n):
-                for pair in self.pairs:
-                    minx = min(pair[0][0], pair[1][0])
-                    maxx = max(pair[0][0], pair[1][0])
-                    miny = min(pair[0][1], pair[1][1])
-                    maxy = max(pair[0][1], pair[1][1])
-                    xdist = min(abs(i - minx), abs(i - maxx))
-                    ydist = min(abs(j - miny), abs(j - maxy))
-                    dist = xdist + ydist
-                    heatmap[i][j] += dist
-        return heatmap
     
     def shortest_path_to_all_points(self, plan):
         lookup = {}
@@ -616,14 +510,16 @@ class Planner:
                 break
             self.sentPlan[del_i][del_j] = False
             self.last_rmv.append( (del_i, del_j) )
-        done = 0
 
         self.sentPlan = self.remove_islands(self.sentPlan)
         self.sentPlan = self.remove_branches(self.sentPlan)
         ones = self.count_ones(self.sentPlan)
         #print(ones)
+        done = 0
+        if(del_i == -1):
+            done = 1
         
-        if(del_i == -1 or ones <= 2):
+        if(del_i == -1 or ones <= 2 and self.bd == 0.1):
             #delete first half of the roads
             self.sentPlan = copy.deepcopy(self.bestPlan)
             ones = self.count_ones(self.sentPlan)
@@ -647,7 +543,7 @@ class Planner:
             done = self.test_mid
             #print("DONE")
             self.test_mid = 1
-            return (self.sentPlan, 0)
+            return (self.sentPlan, self.test_mid)
                 
 
         
@@ -888,14 +784,14 @@ class Planner:
             else:
                 self.shave_side_idx = 5
                 
-        if q > 60:
+        if q >= 60:
             self.necessary = []
 
         #self.necessary = []
         
         #print("hi")
 
-        if not queryOutputs[-1] and q <= 60:
+        if not queryOutputs[-1] and q <= (60 if self.bd == 0.25 else 60):
             self.necessary+=self.last_rmv
             
 
@@ -910,7 +806,7 @@ class Planner:
         
             #print(del_i, del_j)
             
-        for i in range((4 if q > 70 else (3 if q > 60 else 1))):
+        for i in range((4 if q > ((70 if self.bd == 0.25 else 70)) else (3 if q > (60 if self.bd == 0.25 else 60) else 1))):
             del_i, del_j = self.rand_dist_from_border(self.border_width) if q > 30 else random.choice(points_on_border)
             loop_counter = 0
             while not self.sentPlan[del_i][del_j] or  (del_i, del_j) in self.necessary or any([(del_i, del_j) == tuple(pair[0]) or (del_i, del_j) == tuple(pair[1]) for pair in self.pairs]) or not self.road_not_needed(self.sentPlan, (del_i, del_j)):
@@ -1009,6 +905,7 @@ class Planner:
         #if q <= 10: return self.theoretical_max(q, queryOutputs)   
         x = self.shave_from_line(q, queryOutputs, self.random_path)
         if x[1]:
+            #print("hi")
             self.restart = True
             self.line_width = 0
             self.test_mid = 0
