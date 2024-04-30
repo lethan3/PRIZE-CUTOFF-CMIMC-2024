@@ -7,7 +7,7 @@ ALL_NEIGHBOR = lambda x, y, z: ((x + 1, y, z), (x - 1, y, z), (x, y + 1, z), (x,
 SELECT_VALID = lambda lis: [(x, y, z) for (x, y, z) in lis if 1 <= x + y + z <= 2 and -GRID_RADIUS + 1 <= x <= GRID_RADIUS and -GRID_RADIUS + 1 <= y <= GRID_RADIUS and -GRID_RADIUS + 1 <= z <= GRID_RADIUS] # keep those within-bound
 TABLE = {1:0, 2:0, 3:1, 4:3, 5:0}
 
-random.seed(1)
+random.seed(2)
 
 for x in range(-GRID_RADIUS + 1, GRID_RADIUS + 1):
     for y in range(-GRID_RADIUS + 1, GRID_RADIUS + 1):
@@ -283,8 +283,8 @@ def top_move(board_copy, player):
         if move[2] != 0 and move[0] != -1:
             return move
     
-    if len(moves) >= 2 and (moves[0][0], moves[0][1]) == (moves[1][0], moves[1][1]):
-        return moves[random.randint(0, 1)]
+    if len(moves) >= 2:
+        return moves[0 if random.randint(0, 5) else 1]
     
     return moves[0]
 
