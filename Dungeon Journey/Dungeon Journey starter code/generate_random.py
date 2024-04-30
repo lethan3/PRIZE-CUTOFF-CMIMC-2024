@@ -5,7 +5,6 @@ import os
 random.seed(x:=random.randint(0, 1000000))
 
 
-
 def generate_random(n: int) -> list:
     file = open("solutions/random.txt", "w")
     for i in range(n):

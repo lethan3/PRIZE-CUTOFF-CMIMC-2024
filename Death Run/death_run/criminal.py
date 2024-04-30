@@ -268,7 +268,7 @@ class AdjustorCriminal(BaseCriminal):
             vertex_weights.sort()
             # print("vertex_weights", vertex_weights)
             if len(vertex_weights) == 1:
-                edge_pos.append((cv, vertex_weights[0][1], budget, cv_count))
+                edge_pos.append((cv, vertex_weights[0][1], budget//2 if cv_count <= 1 else budget, cv_count))
             else:
                 edge_pos.append((cv, vertex_weights[0][1], vertex_weights[1][0] - vertex_weights[0][0], cv_count))
         final_possibilities = [((v[2] - 1) * v[3], v[2]-1, v[0], v[1]) for v in edge_pos if v[2] - 1 > 0]
@@ -554,7 +554,7 @@ class HybridBetweenEvilAngryConstrainingRobinHoodCriminalAndAngryConstrainingRob
         self.depth += 1
         if self.prev_edge[2] > 0:
             self.turns += 1
-        if edge_updates[self.prev_edge[0], self.prev_edge[1]] > self.prev_edge[2] and self.turns < self.TURNS_CONST:
+        if edge_updates[self.prev_edge[0], self.prev_edge[1]] > self.prev_edge[2] and edge_updates[self.prev_edge[0], self.prev_edge[1]] >= 2 * self.prev_edge[2] and self.turns < self.TURNS_CONST:
             self.num_copied += 1
         for upd in edge_updates:
             self.G[upd[0]][upd[1]]['weight'] += edge_updates[upd]
@@ -572,11 +572,12 @@ class HybridBetweenEvilAngryConstrainingRobinHoodCriminalAndAngryConstrainingRob
             vertex_weights.sort()
             if len(vertex_weights) == 1:
                 edge_pos.append(
-                    (cv, vertex_weights[0][1], budget if (cv_count > 1 or self.depth >= self.DEPTH_CONST) else budget * 3//5, cv_count))
+                    (cv, vertex_weights[0][1], budget if (cv_count > 1 or self.depth >= self.DEPTH_CONST) else budget//2, cv_count))
                 self.evil = 0
             else:
                 edge_pos.append((cv, vertex_weights[0][1], vertex_weights[1][0] - vertex_weights[0][0], cv_count))
-        final_possibilities = [(v[2] * v[3], v[2], v[0], v[1]) for v in edge_pos]
+        late_game = 0 if self.depth >= self.DEPTH_CONST else 0
+        final_possibilities = [((v[2] + late_game) * v[3], v[2] + late_game, v[0], v[1]) for v in edge_pos]
         final_possibilities.sort()
         # print(final_possibilities)
         if len(final_possibilities):
