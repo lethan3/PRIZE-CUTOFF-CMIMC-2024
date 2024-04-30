@@ -138,7 +138,7 @@ class RandomGreedyStudent(BaseStudent):
         glob_mn = INF
         fin_vert = 0
         for adj_vert in list(self.G.neighbors(current_vertex)):
-            if glob_mn > self.G[current_vertex][adj_vert]['weight']:
+            if glob_mn >= self.G[current_vertex][adj_vert]['weight']:
                 glob_mn = self.G[current_vertex][adj_vert]['weight']
                 fin_vert = adj_vert
         return fin_vert
@@ -279,6 +279,46 @@ class BigGreedyStudent(BaseStudent):
                     fin_vert = adj_vert
         return fin_vert
 
+class SimpleGreedyStudent(BaseStudent):
+
+    def __init__(self, edge_list, begin, ends):
+        self.edge_list = edge_list
+        self.begin = begin
+        self.ends = ends
+        self.G = nx.DiGraph()
+        self.G.add_weighted_edges_from(edge_list)
+
+    def process_updates(self, edge_updates):
+        for upd in edge_updates:
+            self.G[upd[0]][upd[1]]['weight'] += edge_updates[upd]
+
+    def strategy(self, edge_updates, vertex_count, current_vertex):
+        # Take the edge corresponding to the shortest path to any end vertex
+        self.process_updates(edge_updates)
+        glob_mn = INF
+        fin_vert = 0
+        for adj_vert in list(self.G.neighbors(current_vertex)):
+            mn = INF
+            for p in self.ends:
+                if not has_path(self.G, adj_vert, p):
+                    continue
+                mn = min(mn, shortest_path_length(self.G, source=adj_vert, target=p, weight='weight'))
+                glob_mn = min(glob_mn, mn + self.G[current_vertex][adj_vert]['weight'])
+            if glob_mn == mn + self.G[current_vertex][adj_vert]['weight'] and (adj_vert in self.ends or len(list(self.G.neighbors(adj_vert))) > 1):
+                    fin_vert = adj_vert
+        if fin_vert == 0:
+            cur_mn = INF
+            for adj_vert in list(self.G.neighbors(current_vertex)):
+                mn = INF
+                for p in self.ends:
+                    if not has_path(self.G, adj_vert, p):
+                        continue
+                    mn = min(mn, shortest_path_length(self.G, source=adj_vert, target=p, weight='weight'))
+                    if mn + self.G[current_vertex][adj_vert]['weight'] > glob_mn:
+                        cur_mn = min(cur_mn, mn + self.G[current_vertex][adj_vert]['weight'])
+                if cur_mn == mn + self.G[current_vertex][adj_vert]['weight'] and (adj_vert in self.ends or len(list(self.G.neighbors(adj_vert))) > 1):
+                        fin_vert = adj_vert
+        return fin_vert
 class CautiousGreedyStudent(BaseStudent):
 
     def __init__(self, edge_list, begin, ends):
@@ -326,7 +366,7 @@ class CautiousGreedyStudent(BaseStudent):
         return fin_vert
 
 class CautiousAvoidantGreedyStudent(BaseStudent):
-    GREED_CONST = 0.25
+    GREED_CONST = 0.2
     GREED_CONST_AHEAD = 0.05
     def __init__(self, edge_list, begin, ends):
         self.t = 0
@@ -357,7 +397,7 @@ class CautiousAvoidantGreedyStudent(BaseStudent):
                 self.sp[x] = min(list([self.G[x][y]['weight'] + self.sp[y] for y in list(self.G.neighbors(x))]))
     def get_possibilities(self, vertex, counter, rewriting):
         # print(vertex, vertex in self.ends)
-        if counter > 3:
+        if counter > 4:
             return 0
         if not rewriting and vertex in self.pos_vals.keys():
             return self.pos_vals[vertex]
@@ -379,7 +419,7 @@ class CautiousAvoidantGreedyStudent(BaseStudent):
         for adj_vert in list(self.G.neighbors(vertex)):
             cg = self.GREED_CONST_AHEAD if adj_vert == greedy_mn[1] and count_greed == 1 else 0
             mn = self.sp[adj_vert]
-            pos += (self.get_possibilities(adj_vert, counter + 1, 0) - cg) / (8 + 2 * (mn + self.G[vertex][adj_vert]['weight'] - glob_mn + 1) * (mn + self.G[vertex][adj_vert]['weight'] - glob_mn + 1))
+            pos += (self.get_possibilities(adj_vert, counter + 1, 0) - cg) / (8 + 2 * (mn + self.G[vertex][adj_vert]['weight'] - glob_mn) * (mn + self.G[vertex][adj_vert]['weight'] - glob_mn))
         self.pos_vals[vertex] = pos
         return pos
 
@@ -408,7 +448,7 @@ class CautiousAvoidantGreedyStudent(BaseStudent):
             cg = self.vc[current_vertex] * self.GREED_CONST if adj_vert == greedy_mn[1] and count_greed == 1 else 0
 
             if glob_mn == mn + self.G[current_vertex][adj_vert]['weight'] and (adj_vert in self.ends or len(list(self.G.neighbors(adj_vert))) > 1):
-                fin_verts.append((self.get_possibilities(adj_vert, 0, 0) - cg, adj_vert))
+                fin_verts.append((self.get_possibilities(adj_vert, 0, 0) - cg, random.randint(0, 100), adj_vert))
 
         if len(fin_verts) == 0:
             cur_mn = INF
@@ -420,7 +460,7 @@ class CautiousAvoidantGreedyStudent(BaseStudent):
             for adj_vert in list(self.G.neighbors(current_vertex)):
                 mn = self.sp[adj_vert]
                 if cur_mn == mn + self.G[current_vertex][adj_vert]['weight']:
-                    fin_verts.append((self.get_possibilities(adj_vert, 0, 0), adj_vert))
+                    fin_verts.append((self.get_possibilities(adj_vert, 0, 0), random.randint(0, 100), adj_vert))
         fin_verts.sort()
         if len(fin_verts) == 0:
             return list(self.G.neighbors(current_vertex))[0]
@@ -429,4 +469,4 @@ class CautiousAvoidantGreedyStudent(BaseStudent):
         # stop = time.time()
         # self.t += stop - start
         # print(self.t)
-        return fin_verts[-1][1]
+        return fin_verts[-1][2]
